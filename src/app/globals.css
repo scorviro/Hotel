@@ -211,9 +211,9 @@ canvas {
 
 .reception-paragraph {
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 300;
-  color: #e5e5e5;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #ffffff;
   line-height: 1.8;
   margin-bottom: 30px;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
@@ -287,7 +287,8 @@ canvas {
   }
   
   .reception-paragraph {
-    font-size: 0.85rem;
+    font-size: 0.98rem;
+    font-weight: 600;
     line-height: 1.6;
     margin-bottom: 20px;
   }
@@ -343,9 +344,9 @@ canvas {
 
 .dining-paragraph {
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 300;
-  color: #e5e5e5;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #ffffff;
   line-height: 1.8;
   margin-bottom: 30px;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
@@ -410,7 +411,8 @@ canvas {
   }
   
   .dining-paragraph {
-    font-size: 0.85rem;
+    font-size: 0.98rem;
+    font-weight: 600;
     line-height: 1.6;
     margin-bottom: 20px;
   }
@@ -466,9 +468,9 @@ canvas {
 
 .elevator-paragraph {
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 300;
-  color: #e5e5e5;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #ffffff;
   line-height: 1.8;
   margin-bottom: 30px;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
@@ -533,7 +535,8 @@ canvas {
   }
   
   .elevator-paragraph {
-    font-size: 0.85rem;
+    font-size: 0.98rem;
+    font-weight: 600;
     line-height: 1.6;
     margin-bottom: 20px;
   }
@@ -726,9 +729,9 @@ canvas {
 
 .room-details-desc {
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 300;
-  color: #e5e5e5;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #ffffff;
   line-height: 1.8;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
@@ -798,7 +801,8 @@ canvas {
   }
   
   .room-details-desc {
-    font-size: 0.85rem;
+    font-size: 0.98rem;
+    font-weight: 600;
     line-height: 1.6;
   }
   
@@ -867,9 +871,9 @@ canvas {
 
 .banquet-paragraph {
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 300;
-  color: #e5e5e5;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #ffffff;
   line-height: 1.8;
   margin-bottom: 30px;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
@@ -934,7 +938,8 @@ canvas {
   }
   
   .banquet-paragraph {
-    font-size: 0.85rem;
+    font-size: 0.98rem;
+    font-weight: 600;
     line-height: 1.6;
     margin-bottom: 20px;
   }
@@ -1711,6 +1716,7 @@ canvas {
   font-weight: 300;
   color: #1a1a1a;
   margin: 0 0 10px 0;
+  will-change: opacity, transform;
 }
 
 .contact-banner-breadcrumbs {
@@ -1767,6 +1773,7 @@ canvas {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.01);
   border: 1px solid rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
+  will-change: opacity, transform;
 }
 
 .info-card-title {
@@ -1779,9 +1786,10 @@ canvas {
 
 .info-card-intro {
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.92rem;
+  font-size: 1.05rem;
+  font-weight: 600;
   line-height: 1.7;
-  color: #555555;
+  color: #333333;
   margin: 0 0 35px 0;
 }
 
@@ -1855,6 +1863,7 @@ canvas {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.01);
   border: 1px solid rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
+  will-change: opacity, transform;
 }
 
 .form-tag-row {
@@ -1890,9 +1899,10 @@ canvas {
 
 .form-card-intro {
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.9rem;
+  font-size: 1.02rem;
+  font-weight: 600;
   line-height: 1.7;
-  color: #555555;
+  color: #333333;
   margin-bottom: 30px;
 }
 
@@ -1929,6 +1939,18 @@ canvas {
 
 .ui-input-field::placeholder, .ui-textarea-field::placeholder {
   color: #a8948d;
+}
+
+.ui-field-label {
+  display: block;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #888888;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+  text-align: left;
 }
 
 .ui-input-field:focus, .ui-select-field:focus, .ui-textarea-field:focus {
@@ -2008,6 +2030,7 @@ canvas {
 /* Map Section Styles */
 .contact-map-section {
   margin-top: 70px;
+  will-change: opacity, transform;
 }
 
 .map-tag-row {
@@ -2096,8 +2119,8 @@ canvas {
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr 1fr 1fr;
-  gap: 40px;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 60px;
   margin-bottom: 50px;
 }
 
@@ -2121,7 +2144,7 @@ canvas {
 }
 
 .footer-logo-img {
-  height: 42px;
+  height: 80px;
   width: auto;
   object-fit: contain;
 }
@@ -2290,6 +2313,33 @@ canvas {
   font-size: 0.8rem;
   color: #777777;
   margin: 0;
+}
+
+.creator-link {
+  color: #F05A28;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+.creator-link:hover {
+  color: #ffffff;
+}
+
+.scorviro-footer-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 3px;
+  transition: transform 0.3s ease;
+}
+
+.creator-link:hover .scorviro-footer-logo {
+  transform: scale(1.15);
 }
 
 /* ==========================================

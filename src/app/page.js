@@ -85,7 +85,85 @@ export default function Home() {
   const isPreloadingRef = useRef(true);
   const contactWrapperRef = useRef(null);
   const contactYToRef = useRef(null);
-  const [wrapperHeight, setWrapperHeight] = useState(1500);
+  const wrapperHeightRef = useRef(1500);
+  const contactTitleRef = useRef(null);
+  const contactInfoCardRef = useRef(null);
+  const contactFormCardRef = useRef(null);
+  const contactMapRef = useRef(null);
+
+  // Secure Front-End Validation Helper (Cybersecurity Focused)
+  const validateForm = (data) => {
+    const { fullname, phone, email, checkin, checkout, requirements } = data;
+
+    // 1. Cybersecurity Check: XSS Injection Detection
+    const xssPattern = /<[^>]*>|javascript:|onerror|onload|onclick|eval/i;
+    for (const key in data) {
+      if (data[key] && xssPattern.test(data[key])) {
+        return {
+          valid: false,
+          error: "Security Alert: Potential script injection attempt blocked."
+        };
+      }
+    }
+
+    // 2. Full Name Validation: Alphabets and spaces only, 2-50 chars
+    const nameRegex = /^[a-zA-Z\s]{2,50}$/;
+    if (!fullname || !nameRegex.test(fullname.trim())) {
+      return {
+        valid: false,
+        error: "Invalid Name: Name should be 2-50 characters long and contain only letters."
+      };
+    }
+
+    // 3. Phone Validation: 10-15 digits, digits/spaces/dashes/plus sign allowed
+    const phoneRegex = /^\+?[0-9\s\-]{10,15}$/;
+    if (!phone || !phoneRegex.test(phone.replace(/\s+/g, ''))) {
+      return {
+        valid: false,
+        error: "Invalid Phone Number: Please enter a valid phone number (10 to 15 digits)."
+      };
+    }
+
+    // 4. Email Validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!email || !emailRegex.test(email.trim())) {
+      return {
+        valid: false,
+        error: "Invalid Email Address: Please enter a valid email format."
+      };
+    }
+
+    // 5. Date Logic Validation
+    if (!checkin || !checkout) {
+      return {
+        valid: false,
+        error: "Booking Error: Check-in and check-out dates are required."
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkinDate = new Date(checkin);
+    checkinDate.setHours(0, 0, 0, 0);
+    const checkoutDate = new Date(checkout);
+    checkoutDate.setHours(0, 0, 0, 0);
+
+    if (checkinDate < today) {
+      return {
+        valid: false,
+        error: "Booking Error: Check-in date cannot be in the past."
+      };
+    }
+
+    if (checkoutDate <= checkinDate) {
+      return {
+        valid: false,
+        error: "Booking Error: Check-out date must be after the check-in date."
+      };
+    }
+
+    return { valid: true };
+  };
 
   const scrollState = useRef({
     current: 0,
@@ -543,8 +621,8 @@ export default function Home() {
       if (contactWrapperRef.current) {
         if (easedScrollTop > animationRange) {
           const delta = easedScrollTop - animationRange;
-          const speedFactor = 0.5; // Slowly slide up at 50% of scroll speed
-          const maxScroll = Math.max(0, wrapperHeight - window.innerHeight);
+          const speedFactor = 1.0; // 1:1 scroll speed for maximum smoothness
+          const maxScroll = Math.max(0, wrapperHeightRef.current - window.innerHeight);
           const targetY = Math.max(-maxScroll, window.innerHeight - delta * speedFactor);
           
           if (contactYToRef.current) {
@@ -553,6 +631,32 @@ export default function Home() {
             contactWrapperRef.current.style.transform = `translateY(${targetY}px)`;
           }
           contactWrapperRef.current.style.pointerEvents = "auto";
+
+          // Animate elements inside the contact wrapper based on scroll delta
+          // Title animates early
+          const titleProgress = Math.min(1, Math.max(0, delta / 300));
+          if (contactTitleRef.current) {
+            contactTitleRef.current.style.opacity = titleProgress;
+            contactTitleRef.current.style.transform = `translateY(${(1 - titleProgress) * 30}px)`;
+          }
+
+          // Cards animate as scroll continues
+          const cardsProgress = Math.min(1, Math.max(0, (delta - 100) / 450));
+          if (contactInfoCardRef.current) {
+            contactInfoCardRef.current.style.opacity = cardsProgress;
+            contactInfoCardRef.current.style.transform = `translateY(${(1 - cardsProgress) * 50}px)`;
+          }
+          if (contactFormCardRef.current) {
+            contactFormCardRef.current.style.opacity = cardsProgress;
+            contactFormCardRef.current.style.transform = `translateY(${(1 - cardsProgress) * 50}px)`;
+          }
+
+          // Map animates at the end
+          const mapProgress = Math.min(1, Math.max(0, (delta - 300) / 500));
+          if (contactMapRef.current) {
+            contactMapRef.current.style.opacity = mapProgress;
+            contactMapRef.current.style.transform = `translateY(${(1 - mapProgress) * 60}px)`;
+          }
         } else {
           if (contactYToRef.current) {
             contactYToRef.current(window.innerHeight);
@@ -560,6 +664,24 @@ export default function Home() {
             contactWrapperRef.current.style.transform = `translateY(${window.innerHeight}px)`;
           }
           contactWrapperRef.current.style.pointerEvents = "none";
+
+          // Reset animations when scrolled out of view
+          if (contactTitleRef.current) {
+            contactTitleRef.current.style.opacity = "0";
+            contactTitleRef.current.style.transform = "translateY(30px)";
+          }
+          if (contactInfoCardRef.current) {
+            contactInfoCardRef.current.style.opacity = "0";
+            contactInfoCardRef.current.style.transform = "translateY(50px)";
+          }
+          if (contactFormCardRef.current) {
+            contactFormCardRef.current.style.opacity = "0";
+            contactFormCardRef.current.style.transform = "translateY(50px)";
+          }
+          if (contactMapRef.current) {
+            contactMapRef.current.style.opacity = "0";
+            contactMapRef.current.style.transform = "translateY(60px)";
+          }
         }
       }
 
@@ -659,9 +781,14 @@ export default function Home() {
   // Measure contact wrapper height dynamically to calculate scroll spacer height
   useEffect(() => {
     if (!contactWrapperRef.current) return;
+    const spacer = document.querySelector(".contact-footer-spacer");
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
-        setWrapperHeight(entry.target.clientHeight || entry.contentRect.height);
+        const height = entry.target.clientHeight || entry.contentRect.height;
+        wrapperHeightRef.current = height;
+        if (spacer) {
+          spacer.style.height = `${height}px`;
+        }
       }
     });
     observer.observe(contactWrapperRef.current);
@@ -672,8 +799,8 @@ export default function Home() {
   useEffect(() => {
     if (contactWrapperRef.current) {
       contactYToRef.current = gsap.quickTo(contactWrapperRef.current, "y", {
-        duration: 0.8,
-        ease: "power2.out",
+        duration: 0.15, // Extremely responsive to avoid laggy feeling
+        ease: "power1.out",
         runBackwards: false
       });
     }
@@ -915,24 +1042,14 @@ export default function Home() {
               
               {/* Top Title Banner */}
               <div className="contact-banner-gradient">
-                <h1 className="contact-banner-title">Contact Us</h1>
-                <div className="contact-banner-breadcrumbs">
-                  <span className="breadcrumb-home">
-                    <svg viewBox="0 0 24 24" className="home-icon-svg">
-                      <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
-                    </svg>
-                    Home
-                  </span>
-                  <span className="breadcrumb-separator">&gt;</span>
-                  <span className="breadcrumb-current">Contact Us</span>
-                </div>
+                <h1 ref={contactTitleRef} className="contact-banner-title" style={{ opacity: 0, transform: "translateY(30px)" }}>Contact Us</h1>
               </div>
 
               <div className="contact-experience-container">
                 <div className="contact-experience-grid">
                   
                   {/* Left Column: Contact Information */}
-                  <div className="contact-info-card">
+                  <div ref={contactInfoCardRef} className="contact-info-card" style={{ opacity: 0, transform: "translateY(50px)" }}>
                     <h2 className="info-card-title">Contact Information</h2>
                     <p className="info-card-intro">
                       Have questions or need help with your booking? Our team is always ready to assist you with professional solutions and reliable support. Feel free to contact us anytime and we will respond as quickly as possible.
@@ -1003,7 +1120,7 @@ export default function Home() {
                   </div>
 
                   {/* Right Column: Get In Touch Form */}
-                  <div className="contact-form-card">
+                  <div ref={contactFormCardRef} className="contact-form-card" style={{ opacity: 0, transform: "translateY(50px)" }}>
                     <div className="form-tag-row">
                       <span className="form-tag-star">*</span>
                       <span className="form-tag-text">Get In Touch</span>
@@ -1013,39 +1130,86 @@ export default function Home() {
                       We would love to hear about your travel plans and help coordinate your stay or event. Fill out the contact form and our team will get back to you soon with the best possible options.
                     </p>
 
-                    <form className="ui-enquiry-form" onSubmit={(e) => { e.preventDefault(); alert("Enquiry Sent Successfully. A dedicated associate will contact you shortly."); }}>
+                    <form className="ui-enquiry-form" onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.target;
+                      const formData = {
+                        fullname: form.querySelector('input[type="text"]').value,
+                        phone: form.querySelector('input[type="tel"]').value,
+                        email: form.querySelector('input[type="email"]').value,
+                        checkin: form.querySelectorAll('input[type="date"]')[0].value,
+                        checkout: form.querySelectorAll('input[type="date"]')[1].value,
+                        requirements: form.querySelector('textarea').value,
+                      };
+                      const validation = validateForm(formData);
+                      if (!validation.valid) {
+                        alert(validation.error);
+                        return;
+                      }
+                      const escapedName = formData.fullname.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                      alert(`Enquiry Sent Successfully for ${escapedName}! A dedicated associate will contact you shortly.`);
+                    }}>
                       <div className="form-row-2-ui">
                         <div className="form-field-ui">
-                          <input type="text" required placeholder="Name" className="ui-input-field" />
+                          <label className="ui-field-label">Full Name *</label>
+                          <input type="text" required maxLength={50} className="ui-input-field" />
                         </div>
                         <div className="form-field-ui">
-                          <input type="email" required placeholder="Email Address" className="ui-input-field" />
+                          <label className="ui-field-label">Phone Number *</label>
+                          <input type="tel" required maxLength={15} className="ui-input-field" />
                         </div>
                       </div>
                       
                       <div className="form-row-2-ui">
                         <div className="form-field-ui">
-                          <input type="tel" required placeholder="Phone Number" className="ui-input-field" />
+                          <label className="ui-field-label">Email Address *</label>
+                          <input type="email" required maxLength={100} className="ui-input-field" />
                         </div>
                         <div className="form-field-ui">
-                          <select defaultValue="" required className="ui-select-field">
-                            <option value="" disabled>Service You&apos;re Interested</option>
-                            <option value="club">Club Room Booking</option>
-                            <option value="quad">Quad Room Booking</option>
-                            <option value="suite">Suite Room Booking</option>
-                            <option value="super_deluxe">Super Deluxe Booking</option>
-                            <option value="banquet">Banquet Hall Enquiry</option>
-                            <option value="other">General Enquiry</option>
+                          <label className="ui-field-label">Number of Guests *</label>
+                          <select defaultValue="2" required className="ui-select-field">
+                            <option value="1">1 Guest</option>
+                            <option value="2">2 Guests</option>
+                            <option value="3">3 Guests</option>
+                            <option value="4">4 Guests</option>
+                            <option value="5">5 Guests</option>
+                            <option value="6">6 Guests</option>
+                            <option value="7">7 Guests</option>
+                            <option value="8">8+ Guests</option>
                           </select>
                         </div>
                       </div>
 
+                      <div className="form-row-2-ui">
+                        <div className="form-field-ui">
+                          <label className="ui-field-label">Check-in Date *</label>
+                          <input type="date" required className="ui-input-field" style={{ colorScheme: "light" }} />
+                        </div>
+                        <div className="form-field-ui">
+                          <label className="ui-field-label">Check-out Date *</label>
+                          <input type="date" required className="ui-input-field" style={{ colorScheme: "light" }} />
+                        </div>
+                      </div>
+
                       <div className="form-field-ui full-width-ui">
-                        <textarea required placeholder="Message" className="ui-textarea-field" rows="4"></textarea>
+                        <label className="ui-field-label">Select Room / Service *</label>
+                        <select defaultValue="club" required className="ui-select-field">
+                          <option value="club">Club Room</option>
+                          <option value="quad">Quad Room</option>
+                          <option value="suite">Suite Room</option>
+                          <option value="super_deluxe">Super Deluxe Room</option>
+                          <option value="banquet">Banquet Hall Enquiry</option>
+                          <option value="other">General Enquiry</option>
+                        </select>
+                      </div>
+
+                      <div className="form-field-ui full-width-ui">
+                        <label className="ui-field-label">Special Requirements</label>
+                        <textarea maxLength={500} className="ui-textarea-field" rows="4"></textarea>
                       </div>
 
                       <button type="submit" className="ui-submit-btn">
-                        <span>Send Message</span>
+                        <span>Send My Enquiry</span>
                         <div className="submit-btn-arrow-circle">
                           <svg viewBox="0 0 24 24" className="submit-btn-arrow-svg">
                             <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1058,7 +1222,7 @@ export default function Home() {
                 </div>
 
                 {/* Our Location Map Section */}
-                <div className="contact-map-section">
+                <div ref={contactMapRef} className="contact-map-section" style={{ opacity: 0, transform: "translateY(60px)" }}>
                   <div className="map-tag-row">
                     <span className="map-tag-star">*</span>
                     <span className="map-tag-text">Our Location</span>
@@ -1118,21 +1282,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Column 2: Quick Links */}
-                  <div className="footer-col links-col">
-                    <h3 className="footer-col-title">Quick Links</h3>
-                    <ul className="footer-links-list-ui">
-                      <li><a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Home</a></li>
-                      <li><a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: window.innerHeight * 3.5, behavior: 'smooth' }); }}>About Us</a></li>
-                      <li><a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: window.innerHeight * 8.5, behavior: 'smooth' }); }}>Rooms &amp; Suites</a></li>
-                      <li><a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: window.innerHeight * 5.0, behavior: 'smooth' }); }}>Restaurant</a></li>
-                      <li><a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: window.innerHeight * 10.5, behavior: 'smooth' }); }}>Banquet Hall</a></li>
-                      <li><a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: window.innerHeight * 7.5, behavior: 'smooth' }); }}>Game Zone</a></li>
-                      <li><a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }}>Contact Us</a></li>
-                    </ul>
-                  </div>
-
-                  {/* Column 3: Contact Info */}
+                  {/* Column 2: Contact Info */}
                   <div className="footer-col contact-col">
                     <h3 className="footer-col-title">Contact Us</h3>
                     <div className="footer-contact-info-list">
@@ -1154,38 +1304,13 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Column 4: Join Newsletter */}
-                  <div className="footer-col newsletter-col">
-                    <h3 className="footer-col-title">Join Newsletter</h3>
-                    <form className="footer-newsletter-form" onSubmit={(e) => { e.preventDefault(); alert("Subscribed Successfully!"); }}>
-                      <div className="newsletter-input-wrapper">
-                        <input type="email" required placeholder="Email" className="newsletter-email-input" />
-                        <button type="submit" className="newsletter-submit-btn" aria-label="Subscribe">
-                          <svg viewBox="0 0 24 24" className="newsletter-send-icon">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
-                          </svg>
-                        </button>
-                      </div>
-                    </form>
-                    
-                    {/* User Avatars */}
-                    <div className="newsletter-avatars-row">
-                      <div className="avatars-pile">
-                        <img src="/gallary/image1.jpg" alt="User 1" className="avatar-img" />
-                        <img src="/gallary/image2.jpg" alt="User 2" className="avatar-img" />
-                        <img src="/gallary/image3.jpg" alt="User 3" className="avatar-img" />
-                        <img src="/gallary/image4.jpg" alt="User 4" className="avatar-img" />
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="footer-bottom-line"></div>
 
                 <div className="footer-bottom-ui">
                   <p className="footer-copyright-ui">
-                    Copyright &copy; 2026 Divi Templatespro All Rights Reserved
+                    &copy; 2026 The Blackstone Hotel. All Rights Reserved. | Website designed and developed by <a href="https://scorviro.vercel.app/" target="_blank" rel="noopener noreferrer" className="creator-link"><img src="/favicon.png" alt="scorviro logo" className="scorviro-footer-logo" /><span>scorviro</span></a>
                   </p>
                 </div>
 
@@ -1197,7 +1322,7 @@ export default function Home() {
           <div 
             className="contact-footer-spacer"
             style={{ 
-              height: `${wrapperHeight * 1.5}px`
+              height: "1500px"
             }} 
           />
         </div>
@@ -1280,15 +1405,34 @@ export default function Home() {
                   <h2 className="contact-form-title">Booking Form</h2>
                 </div>
 
-                <form className="premium-enquiry-form" onSubmit={(e) => { e.preventDefault(); alert("Enquiry Sent Successfully. A dedicated associate will contact you shortly."); setIsContactOpen(false); }}>
+                <form className="premium-enquiry-form" onSubmit={(e) => {
+                  e.preventDefault();
+                  const form = e.target;
+                  const formData = {
+                    fullname: form.querySelector('#fullname').value,
+                    phone: form.querySelector('#phone').value,
+                    email: form.querySelector('#email').value,
+                    checkin: form.querySelector('#checkin').value,
+                    checkout: form.querySelector('#checkout').value,
+                    requirements: form.querySelector('#requirements').value,
+                  };
+                  const validation = validateForm(formData);
+                  if (!validation.valid) {
+                    alert(validation.error);
+                    return;
+                  }
+                  const escapedName = formData.fullname.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                  alert(`Booking Enquiry Sent Successfully for ${escapedName}! A dedicated associate will contact you shortly.`);
+                  setIsContactOpen(false);
+                }}>
                   <div className="form-row-2">
                     <div className="form-group floating-group">
-                      <input type="text" id="fullname" required placeholder=" " className="premium-input" />
+                      <input type="text" id="fullname" required maxLength={50} placeholder=" " className="premium-input" />
                       <label htmlFor="fullname" className="premium-label">Full Name *</label>
                       <div className="input-focus-line"></div>
                     </div>
                     <div className="form-group floating-group">
-                      <input type="tel" id="phone" required placeholder=" " className="premium-input" />
+                      <input type="tel" id="phone" required maxLength={15} placeholder=" " className="premium-input" />
                       <label htmlFor="phone" className="premium-label">Phone Number *</label>
                       <div className="input-focus-line"></div>
                     </div>
@@ -1296,7 +1440,7 @@ export default function Home() {
 
                   <div className="form-row-2">
                     <div className="form-group floating-group">
-                      <input type="email" id="email" required placeholder=" " className="premium-input" />
+                      <input type="email" id="email" required maxLength={100} placeholder=" " className="premium-input" />
                       <label htmlFor="email" className="premium-label">Email Address *</label>
                       <div className="input-focus-line"></div>
                     </div>
@@ -1337,7 +1481,7 @@ export default function Home() {
                   </div>
 
                   <div className="form-group textarea-group">
-                    <textarea id="requirements" placeholder="Special Requirements (dietary preferences, airport pickup, bedding layout, etc.)" className="premium-textarea" rows="3"></textarea>
+                    <textarea id="requirements" maxLength={500} placeholder="Special Requirements (dietary preferences, airport pickup, bedding layout, etc.)" className="premium-textarea" rows="3"></textarea>
                   </div>
 
                   <button type="submit" className="premium-submit-btn">
