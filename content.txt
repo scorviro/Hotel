@@ -1,0 +1,682 @@
+THE BLACKSTONE HOTEL
+- RAJKOT, GUJARAT -
+???????????????????????????????????
+COMPLETE CINEMATIC WEBSITE CONTENT
+& ANIMATION GUIDE
+1,073 Frame Walkthrough  �  13 Cinematic Sections  �  Full Developer Spec
+???????????????????????????????????
+Version 1.0  �  Prepared June 2026
+theblackstone.in  �  +91 82382 82361  �  Hoteltheblackstone@gmail.com
+
+TABLE OF CONTENTS
+- ? -
+Part I - Cinematic Frame-by-Frame Guide (Frames 1-1073)
+Part II - Full Website Page Content
+   � Homepage  � About Us  � Rooms & Suites  � Restaurant  � Banquet  � Game Zone
+   � Facilities  � Gallery  � Testimonials  � FAQ  � Contact  � Footer
+Part III - SEO & Metadata Package
+Part IV - Animation & Development Technical Spec
+   � Framer Motion Implementation  � GSAP Implementation
+   � One-in-a-Million Navbar Design Spec  � Final Developer Notes
+
+PART I
+CINEMATIC FRAME-BY-FRAME GUIDE
+Each frame section maps directly to the hotel walkthrough video (1,073 total frames). The content below specifies every element required to build the animated website section corresponding to each visual moment.
+- ? -
+FRAME 01  �  SKY VIEW - LUXURY INTRODUCTION
+?????????????????????????????????????
+Frame Range	Frames 1-138
+Section	HERO / CINEMATIC OPENER
+VISUAL DESCRIPTION
+Ultra-wide open blue sky with wispy cirrus clouds bathed in golden sunrise light. A flock of birds (12-15) flies in a loose V-formation toward the upper-right. Horizon glows amber and soft white. Frame counter: 1/1073.
+PREMIUM HEADLINE
+Where Heaven Meets Hospitality
+EMOTIONAL SUB-HEADING
+The sky is not the limit. It is your welcome mat.
+STORYTELLING PARAGRAPH
+High above the ordinary, a world of refined elegance unfolds. The Blackstone Hotel invites you to shed the weight of the everyday and ascend into an experience where every breath feels like the first. From the moment our skyline comes into view, you know you have arrived somewhere extraordinary - a sanctuary where luxury is not a luxury but a language.
+CTA BUTTON TEXT
+[ Begin Your Journey ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Parallax + Text Mask Reveal
+Direction	Upward drift with depth layers
+Timing	0s entry / 3s total reveal / infinite scroll parallax
+Scroll Behavior	Fixed hero, content slides over on scroll - classic cinematic pin
+BG Animation	Subtle cloud drift (CSS animation translateX + opacity breathing on cloud layers)
+FRAMER MOTION IMPLEMENTATION
+motion.div initial={{ opacity:0, scale:1.08 }} animate={{ opacity:1, scale:1 }} transition={{ duration:2.4, ease:'easeOut' }} // hero image motion.h1 variants={textMaskVariant} initial='hidden' animate='visible' // headline reveal
+GSAP IMPLEMENTATION
+gsap.from('.hero-sky', { scale:1.1, duration:3, ease:'power2.out' }) gsapScrollTrigger pinning + parallax on birds layer (y: -120px over 100vh)
+MOBILE ANIMATION VERSION
+Vertical crop (portrait) sky, text fades up from bottom, single CTA button pinned at 80vh
+- ? -
+FRAME 02  �  HOTEL EXTERIOR REVEAL
+?????????????????????????????????????
+Frame Range	Frames 139-336
+Section	HOTEL REVEAL / FIRST IMPRESSION
+VISUAL DESCRIPTION
+Full-fa�ade reveal of The Blackstone Hotel. 8-storey contemporary structure: white and black paneled exterior, brick-red lower floors, floor-to-ceiling windows with dark frames, rooftop solar pergola. Five luxury cars (Audi, Mercedes G-Class, Range Rover, BMW, Mercedes E-Class) parked symmetrically. Palm trees frame both sides. Blue sky with birds in upper-right. Signage: Restaurant, Reception, Refreshment Zone.
+PREMIUM HEADLINE
+An Icon Rises on the Rajkot Skyline
+EMOTIONAL SUB-HEADING
+Architectural brilliance. Unapologetic presence.
+STORYTELLING PARAGRAPH
+Standing tall on the 150 Ft. Ring Road near Sokhda Chowkdi, The Blackstone Hotel is not merely a building - it is a statement. Eight floors of contemporary design language, where dark stone meets crisp white, where every window is a frame for the world beyond. Conceived as a business retreat and a leisure sanctuary in equal measure, the hotel sits just 18 km from Rajkot International Airport and moments from the city's commercial heartbeat.
+CTA BUTTON TEXT
+[ Explore The Hotel ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Image Reveal + Zoom Out
+Direction	Reveal from bottom edge upward, then subtle zoom-out to full frame
+Timing	0.2s delay / 2s reveal / 0.8s zoom settle
+Scroll Behavior	Scroll-triggered entrance: building slides up from behind fold
+BG Animation	Birds CSS layer floats left-to-right on 8s loop, cars shimmer with subtle reflection keyframe
+FRAMER MOTION IMPLEMENTATION
+motion.img initial={{ clipPath:'inset(100% 0 0 0)' }} whileInView={{ clipPath:'inset(0% 0 0 0)' }} transition={{ duration:1.8, ease:[0.76,0,0.24,1] }}
+GSAP IMPLEMENTATION
+gsap.fromTo('.hotel-exterior', { clipPath:'inset(100% 0 0 0)' }, { clipPath:'inset(0%)', duration:2, ease:'power4.inOut', scrollTrigger:{trigger:'.exterior-section', start:'top 80%'} })
+MOBILE ANIMATION VERSION
+Portrait crop focusing on signage and entrance doors. Stagger fade-in: building ? cars ? text
+- ? -
+FRAME 03  �  RECEPTION AREA
+?????????????????????????????????????
+Frame Range	Frames 337-469
+Section	WELCOME / BRAND STORY
+VISUAL DESCRIPTION
+Elegant reception lobby. Dark marble counter with gold 'RECEPTION' lettering and backlit base. Black accent wall with gold lotus Blackstone Hotel logo, wooden slat wall backdrop. Cognac leather armchairs + black marble coffee table. Portrait of Maharaja Krishnakumarsinhji of Bhavnagar in ornate frame. Restaurant entrance visible left with gold 'R' emblem. Warm amber LED cove lighting. Marble flooring.
+PREMIUM HEADLINE
+Your Story Begins at First Light
+EMOTIONAL SUB-HEADING
+A lobby that whispers heritage and roars luxury.
+STORYTELLING PARAGRAPH
+Step through our doors and into a world where first impressions are permanent impressions. The Blackstone reception is designed as an overture - a visual symphony of dark Marquina marble, warm amber light, and hand-selected cognac leather. Presiding over the space, the portrait of Maharaja Krishnakumarsinhji of Bhavnagar anchors our identity in the royal legacy of Gujarat. Here, every guest is greeted not as a visitor, but as a distinguished arrival.
+CTA BUTTON TEXT
+[ Meet Our Concierge ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Blur To Sharp + Luxury Smooth Motion
+Direction	Camera slow dolly forward, elements sharpen into focus one by one
+Timing	1s blur-in / 2.5s sharp / sequential element reveals at 0.3s intervals
+Scroll Behavior	Horizontal scroll reveal - lobby elements enter from left as user scrolls right
+BG Animation	Ambient light pulse on ceiling LEDs (subtle opacity 0.85-1.0 breathing, 4s loop)
+FRAMER MOTION IMPLEMENTATION
+motion.div initial={{ filter:'blur(12px)', opacity:0 }} whileInView={{ filter:'blur(0px)', opacity:1 }} transition={{ duration:1.6, ease:'easeOut' }} Staggered children: armchairs, desk, portrait each +0.2s delay
+GSAP IMPLEMENTATION
+gsap.to('.lobby-blur', { filter:'blur(0px)', opacity:1, duration:1.8, stagger:0.25, scrollTrigger:{trigger:'.lobby', start:'top 60%'} })
+MOBILE ANIMATION VERSION
+Vertical pan from floor to logo sign. Headline fades in after logo settles.
+- ? -
+FRAME 04  �  RESTAURANT INTERIOR
+?????????????????????????????????????
+Frame Range	Frames 470-718
+Section	DINING / CULINARY EXPERIENCE
+VISUAL DESCRIPTION
+Grand restaurant floor. Rich dark-walnut furniture, pendant globe lights in warm amber, marble-effect flooring. Tables set with white plates, glassware, small succulents. Long buffet counter left side. Three large Maharaja portraits on wall. Bar cabinet with spirits visible in background. The Blackstone logo on far mirror wall. Capacity: 60+ covers.
+PREMIUM HEADLINE
+A Table Set for Royalty
+EMOTIONAL SUB-HEADING
+Where every meal is a ceremony, every flavour a memory.
+STORYTELLING PARAGRAPH
+The Blackstone Restaurant is an homage to Gujarati culinary heritage elevated through a global lens. Beneath the warm glow of hand-blown pendant lights, 60+ expertly laid covers await the discerning diner. Our buffet spread - rich in regional spice and international subtlety - is prepared daily by our executive chef using locally sourced ingredients. Whether you arrive for a business breakfast, a family celebration, or an intimate dinner, the restaurant transforms every occasion into an occasion worth remembering.
+CTA BUTTON TEXT
+[ Reserve Your Table ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Fade In + Reveal
+Direction	Soft cross-fade from dark to revealed interior, light cascading left to right
+Timing	0.5s entry / 1.8s full reveal / ambient loop
+Scroll Behavior	Parallax on pendant lights (float slightly as user scrolls) - depth illusion
+BG Animation	Candle-flicker micro-animation on light sources (CSS filter brightness: 0.9-1.1, random timing)
+FRAMER MOTION IMPLEMENTATION
+useScroll + useTransform for pendant lights parallax (y: 0 to -30px over scroll section) Staggered table reveals from center outward
+GSAP IMPLEMENTATION
+gsap.from('.pendant-light', { y:-20, opacity:0, stagger:0.15, duration:1, scrollTrigger })
+MOBILE ANIMATION VERSION
+Hero: single table with full settings. Headline floats up. CTA anchored to bottom.
+- ? -
+FRAME 05  �  ELEVATOR LOBBY
+?????????????????????????????????????
+Frame Range	Frames 719-860
+Section	JOURNEY BETWEEN SPACES
+VISUAL DESCRIPTION
+Transitional corridor. Stainless steel elevator doors with dark marble surround. Wooden guest room door center-right. Floor-to-ceiling vertical garden wall - vibrant greens, reds, purples, pink flowers - occupying right wall entirely. Beige marble floor. Recessed ceiling lighting. Minimal, meditative.
+PREMIUM HEADLINE
+Every Floor, A New World
+EMOTIONAL SUB-HEADING
+The in-between is where the magic lives.
+STORYTELLING PARAGRAPH
+At The Blackstone, the journey to your room is part of the experience. Our living green walls - bursting with ferns, moss, succulents, and seasonal blooms - transform a functional corridor into a sensory pause. The scent of living plants, the stillness of marble, the gleam of steel: this is the hotel's breathing space, a moment of transition that prepares you for the sanctuary beyond each door.
+CTA BUTTON TEXT
+[ Discover Your Floor ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Slide Up + Scale In
+Direction	Floor-up reveal, camera rising as user scrolls - elevator simulation
+Timing	0.8s delay / 1.4s duration / smooth spring physics
+Scroll Behavior	Scroll-linked vertical travel animation - simulates ascending in an elevator
+BG Animation	Green wall particles: subtle leaf drift animation, CSS transform rotate on individual leaves
+FRAMER MOTION IMPLEMENTATION
+useScroll linked y-transform: simulates camera rising floor by floor Green wall: motion.div with randomized y + rotate per leaf element
+GSAP IMPLEMENTATION
+ScrollTrigger scrub:true - translate section upward, creating elevator-ride effect over 2x viewport height
+MOBILE ANIMATION VERSION
+Focus on green wall close-up. Door swings open animation on scroll reveal.
+- ? -
+FRAME 06  �  LUXURY BEDROOM
+?????????????????????????????????????
+Frame Range	Frames 861-1045
+Section	ROOMS & SUITES
+VISUAL DESCRIPTION
+Premium guest room. King-size bed with dark tufted leather headboard set against warm walnut wood panel wall with ambient LED strip backlight. Blue-teal marble-pattern throw runner. Pair of matching decorative cushions. Walnut bedside table with telephone. Pendant silver globe light. Black marble feature wall panel on right. Grey draped full-height curtains. Wooden lounge chairs with round table, grey upholstery. Porcelain white marble floor. Artwork: nature scene with deer and golden tree.
+PREMIUM HEADLINE
+Sleep Like You Were Born to This
+EMOTIONAL SUB-HEADING
+Where every night is a masterpiece of comfort.
+STORYTELLING PARAGRAPH
+Our rooms are choreographed environments of rest. The interplay of warm walnut grain, cool black marble, and the burnished glow of ambient LEDs creates a space that feels simultaneously energised and deeply restful. The king-size bed - dressed in 400-thread Egyptian cotton - is framed by a floor-to-ceiling wooden headboard panel that whispers warmth. Every detail from the German pendant fixtures to the hand-stitched throw runner has been considered with one purpose: to make you feel this is the finest place you have ever slept.
+CTA BUTTON TEXT
+[ View All Rooms ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Zoom In + Luxury Smooth Motion
+Direction	Slow cinematic zoom into bed from doorway perspective, then pan across room
+Timing	1s zoom-in start / 4s total pan / 0.6s settle
+Scroll Behavior	Horizontal room tour - scroll triggers 360� pan effect across room features
+BG Animation	LED strip breathes (opacity animation). Curtain gentle sway (CSS translateX �3px, 6s ease-in-out).
+FRAMER MOTION IMPLEMENTATION
+motion.div initial={{ scale:1.15 }} whileInView={{ scale:1 }} transition={{ duration:2, ease:[0.22,1,0.36,1] }} Room feature cards stagger in from right
+GSAP IMPLEMENTATION
+Horizontal scroll pin - room features progress left-to-right as user scrolls down, GSAP ScrollTrigger horizontal
+MOBILE ANIMATION VERSION
+Swipeable room feature cards. Hero: bed close-up. Tap-to-reveal amenity list overlay.
+- ? -
+FRAME 07  �  BANQUET HALL
+?????????????????????????????????????
+Frame Range	Frames 1046-1073
+Section	BANQUET & EVENTS
+VISUAL DESCRIPTION
+Grand banquet hall. High white ceiling with recessed linear LED strips and crystal pendant chandeliers. Marble floor (grey/white). Round tables with floral-print tablecloths, black chair covers with gold satin bows. Central mandap/stage: gold throne chairs, floral arch with white and green hanging drapes, pink cherry-blossom walls left, green plant wall right. Red raised platform stage-left with ornate white velvet sofa. Gold decorative pillars flanking mandap.
+PREMIUM HEADLINE
+Your Greatest Moments Deserve a Grand Stage
+EMOTIONAL SUB-HEADING
+Weddings. Celebrations. Milestones. All at their most magnificent.
+STORYTELLING PARAGRAPH
+The Blackstone Banquet Hall is a canvas for life's most extraordinary chapters. With a capacity of 200+ guests, a 40-foot ceiling, and bespoke event styling available from our in-house d�cor team, every celebration here is tailored to the individual. Wedding mandaps adorned with cascading floral arches, corporate galas beneath crystal chandeliers, milestone birthdays punctuated by gold and black - our hall transforms to tell your story, exactly as you imagined it.
+CTA BUTTON TEXT
+[ Plan Your Event ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Scale In + Fade In
+Direction	Wide establishing shot scale-out from mandap center, audience perspective
+Timing	0.4s delay / 2s scale / 1s text fade
+Scroll Behavior	Counter animation triggers (200+ guests, 40ft ceiling) as section enters viewport
+BG Animation	Confetti/petal particle system on section entry (CSS + canvas). Light ray sweep across marble floor.
+FRAMER MOTION IMPLEMENTATION
+Counter animation: useMotionValue + useSpring for animated stat numbers Floral elements: random scale + opacity micro-animations
+GSAP IMPLEMENTATION
+gsap.from('.banquet-reveal', { scale:0.9, opacity:0, duration:1.6, ease:'power3.out' }) SplitText on headline for letter-by-letter reveal
+MOBILE ANIMATION VERSION
+Panoramic scroll - user swipes through event setups. Stats counter at bottom.
+- ? -
+FRAME 08  �  INDOOR RECREATION ZONE
+?????????????????????????????????????
+Frame Range	Frame 1073+ / Supplementary
+Section	RECREATION & LIFESTYLE
+VISUAL DESCRIPTION
+Modern indoor game zone and recreation area. Refreshment Zone signage (seen on exterior). Multi-activity space with contemporary lighting.
+PREMIUM HEADLINE
+Play Is the Language of the Soul
+EMOTIONAL SUB-HEADING
+Unwind. Compete. Recharge.
+STORYTELLING PARAGRAPH
+The Blackstone Refreshment Zone is where structured relaxation meets unscripted joy. Designed for guests who believe that travel should include delight as much as destination, our indoor recreation area offers a curated mix of leisure activities - from board games and indoor sports to dedicated relaxation pods and social lounges. Whether you are travelling solo or with family, the game zone is your permission to fully disconnect from the world outside.
+CTA BUTTON TEXT
+[ Explore Recreation ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Slide Right + Scale In
+Direction	Elements enter from right as cursor/scroll moves left-to-right
+Timing	0.3s stagger per element / 1.2s per animation
+Scroll Behavior	Horizontal scroll carousel - activity items scroll laterally
+BG Animation	Neon accent colour pulses on game feature icons. Subtle grid background animation.
+FRAMER MOTION IMPLEMENTATION
+Horizontal drag carousel with momentum physics: useDragControls + spring
+GSAP IMPLEMENTATION
+gsap ScrollTrigger horizontal pin with snapping between activity cards
+MOBILE ANIMATION VERSION
+Full-screen swipe carousel. Icon + label cards. Haptic feedback on mobile tap.
+- ? -
+FRAME 09  �  FACILITIES & SERVICES
+?????????????????????????????????????
+Frame Range	Supplementary Section
+Section	AMENITIES
+VISUAL DESCRIPTION
+Grid of hotel amenity icons: WiFi, Smart TV, Breakfast, Pick & Drop, Parking, Shower/Bathtub. Premium iconography on dark or warm-light backgrounds.
+PREMIUM HEADLINE
+Every Need, Anticipated Before You Ask
+EMOTIONAL SUB-HEADING
+Six pillars of an uncompromising stay.
+STORYTELLING PARAGRAPH
+At The Blackstone, the definition of luxury is simple: nothing should be missing, and nothing should require effort. Our facilities have been curated around the modern traveller's complete spectrum of needs - ultra-fast fibre Wi-Fi for the executive, Smart 4K televisions for the leisure guest, complimentary breakfast to start each day with intention, seamless airport pick-and-drop coordination, secure underground parking, and rainfall shower suites that turn the ordinary act of bathing into a ritual.
+CTA BUTTON TEXT
+[ View All Amenities ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Scale In + Fade In
+Direction	Icon grid reveals row by row with spring bounce
+Timing	0.15s stagger per icon / 0.8s per reveal
+Scroll Behavior	Sticky section with icons appearing one by one as user scrolls through
+BG Animation	Icon hover: gold glow pulse. Background: subtle geometric grid drift.
+FRAMER MOTION IMPLEMENTATION
+Grid container variants with staggerChildren: 0.1 Each icon: scale 0?1 with spring { stiffness:300, damping:20 }
+GSAP IMPLEMENTATION
+gsap.from('.amenity-icon', { scale:0, opacity:0, stagger:0.12, duration:0.6, ease:'back.out(1.7)' })
+MOBILE ANIMATION VERSION
+2-column icon grid. Tap to expand with details overlay.
+- ? -
+FRAME 10  �  GALLERY
+?????????????????????????????????????
+Frame Range	Visual Archive
+Section	GALLERY
+VISUAL DESCRIPTION
+Masonry/cinematic grid: exterior, reception, restaurant, rooms, banquet, green corridor - all 1073 frames distilled into a curated visual story.
+PREMIUM HEADLINE
+A Hotel Best Told in Images
+EMOTIONAL SUB-HEADING
+One thousand moments. One singular experience.
+STORYTELLING PARAGRAPH
+The Blackstone's story spans 1,073 frames - each one a testament to considered design, warm hospitality, and the pursuit of perfection in every corner of our property. Our gallery is not a catalogue of rooms and corridors; it is an invitation to visualise yourself within these spaces. Browse the collection and let your imagination begin your stay before you ever arrive.
+CTA BUTTON TEXT
+[ View Full Gallery ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Image Reveal + Parallax
+Direction	Masonry tiles reveal with stagger - top-left to bottom-right
+Timing	0.08s stagger per tile / 1s per reveal
+Scroll Behavior	Infinite scroll masonry with lazy-load blur-to-sharp on each image
+BG Animation	Hover: image scale 1.05, overlay fade-in with room name label. Lightbox on click.
+FRAMER MOTION IMPLEMENTATION
+AnimatePresence for lightbox modal. LayoutId for shared element transition (thumbnail ? fullscreen).
+GSAP IMPLEMENTATION
+gsap ScrollTrigger + clip-path reveal per gallery tile. Magnetic cursor effect on hover.
+MOBILE ANIMATION VERSION
+3-column masonry. Pinch-to-zoom lightbox. Swipe between images.
+- ? -
+FRAME 11  �  TESTIMONIALS
+?????????????????????????????????????
+Frame Range	Social Proof Section
+Section	GUEST VOICES
+VISUAL DESCRIPTION
+Dark luxury card carousel against a gold/black background. Review cards with star ratings, guest names, review text, and stylised quotation marks.
+PREMIUM HEADLINE
+Spoken by Those Who Stayed
+EMOTIONAL SUB-HEADING
+Our finest reviews are written in the language of returning guests.
+STORYTELLING PARAGRAPH
+Words from our guests carry more weight than any award. From the business traveller who found the perfect briefing room to the family who discovered their favourite dinner table - every review is a chapter in our ongoing story. Read what our guests say, and hear the consistency of a hotel that does not simply promise luxury but delivers it, stay after stay.
+CTA BUTTON TEXT
+[ Read All Reviews ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Fade In + Slide Right
+Direction	Cards slide in from right on auto-play / user drag
+Timing	4s auto-advance / 0.8s transition
+Scroll Behavior	Section pins, carousel auto-advances, then unpins on last card
+BG Animation	Gold particle shimmer behind cards. Quotation marks scale-in dramatically on card change.
+FRAMER MOTION IMPLEMENTATION
+Draggable carousel with AnimatePresence and directional variants (enter/exit left or right) Star ratings animate in sequence with useSpring
+GSAP IMPLEMENTATION
+gsap.to('.testimonial-track', { x: -cardWidth * activeIndex, duration:0.8, ease:'power2.inOut' })
+MOBILE ANIMATION VERSION
+Full-width swipeable cards. 5-star rating animates on entry. Dots navigation.
+- ? -
+FRAME 12  �  CONTACT
+?????????????????????????????????????
+Frame Range	Contact Section
+Section	FIND US
+VISUAL DESCRIPTION
+Split-screen: left - Google Maps embed showing 150 Ft. Ring Road, Rajkot; right - elegant contact form on dark background with gold input borders.
+PREMIUM HEADLINE
+We Are Where You Need Us to Be
+EMOTIONAL SUB-HEADING
+150 Ft. Ring Road, Nr. Sokhda Chowkdi, Rajkot - 06.
+STORYTELLING PARAGRAPH
+Whether you are planning a business visit, coordinating a family stay, or enquiring about our banquet facilities for an upcoming event - our team is available to assist you every step of the way. Reach us by phone, email, or complete the quick enquiry form and a dedicated guest relations associate will respond within the hour.
+CTA BUTTON TEXT
+[ Send Enquiry ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Slide Up + Fade In
+Direction	Map slides in from left, form slides in from right
+Timing	0.4s delay / 1.2s duration each
+Scroll Behavior	Both halves animate simultaneously on section enter
+BG Animation	Map pin pulse animation (CSS radial-gradient expanding ring). Form field focus: gold underline slide-in.
+FRAMER MOTION IMPLEMENTATION
+motion.div initial={{ x: -80, opacity:0 }} whileInView={{ x:0, opacity:1 }} (map) motion.div initial={{ x: 80, opacity:0 }} whileInView={{ x:0, opacity:1 }} (form)
+GSAP IMPLEMENTATION
+gsap.from(['.map', '.form'], { x: (i)=> i===0 ? -80 : 80, opacity:0, duration:1.2, ease:'power2.out', scrollTrigger })
+MOBILE ANIMATION VERSION
+Stacked: map full width top, form below. Input fields full width. Floating call button.
+- ? -
+FRAME 13  �  BOOKING CTA
+?????????????????????????????????????
+Frame Range	Final Conversion Frame
+Section	RESERVATION
+VISUAL DESCRIPTION
+Full-bleed dark hero section. Blackstone lotus logo in gold centre-screen. Tagline below. 'Book Now' button with gold border and hover fill. Phone numbers prominently placed. Subtle star-field or bokeh background animation.
+PREMIUM HEADLINE
+Your Room is Ready. Are You?
+EMOTIONAL SUB-HEADING
+Reserve today and step into The Blackstone experience.
+STORYTELLING PARAGRAPH
+Every detail has been attended to. Every amenity is prepared. The only variable is the date of your arrival. Book directly through our website for the best available rates, complimentary breakfast, and priority check-in - exclusive benefits for guests who choose to stay with us directly.
+CTA BUTTON TEXT
+[ Book Your Stay Now ]
+ANIMATION & SCROLL SPECIFICATION
+Animation Type	Scale In + Luxury Smooth Motion
+Direction	Logo scales in from 0.6x, button pulses with gold glow
+Timing	0s logo / 0.6s tagline / 1.2s button / continuous button pulse
+Scroll Behavior	Sticky footer CTA appears after 70% page scroll on mobile
+BG Animation	Bokeh particles: floating gold circles, CSS animation blur + translate. Phone number: typewriter effect.
+FRAMER MOTION IMPLEMENTATION
+motion.button whileHover={{ scale:1.04, boxShadow:'0 0 30px rgba(184,150,26,0.6)' }} Logo: initial={{ scale:0.5, opacity:0 }} animate={{ scale:1, opacity:1 }} transition={{ type:'spring', stiffness:200 }}
+GSAP IMPLEMENTATION
+gsap.to('.book-btn', { boxShadow:'0 0 40px rgba(212,175,55,0.7)', repeat:-1, yoyo:true, duration:1.5 })
+MOBILE ANIMATION VERSION
+Fullscreen black card. Large CTA button. One-tap call-to-book. Urgency micro-copy below.
+- ? -
+
+PART II
+FULL WEBSITE PAGE CONTENT
+- ? -
+HOMEPAGE
+Hero Section
+H1 Tag: Where Heaven Meets Hospitality
+H2 Tag: The Blackstone Hotel - Rajkot's Premier Luxury Destination
+HERO BODY COPY
+Since 2015, The Blackstone Hotel has been Rajkot's definitive statement in business and leisure hospitality. Nestled on the 150 Ft. Ring Road, 18 km from Rajkot International Airport, we offer 60+ guest rooms, a grand restaurant, a 200-seat banquet hall, and a living-wall lobby that makes arrival feel like theatre. This is not a place you check in to. This is a place you return to.
+Welcome Section
+Welcome Heading: An Oasis in the Heart of Rajkot's Business District
+WELCOME COPY
+The Blackstone is simultaneously everything and nothing like what you expect from a modern luxury hotel. Every surface has been chosen with intention - from the dark Marquina marble at reception to the cognac leather armchairs that invite you to pause. Our restaurant honours the culinary legacy of Gujarat through a sophisticated menu that bridges the regional and the global. Our rooms are sanctuaries of considered silence. And our banquet hall stages the most important days of your life with the grandeur they deserve.
+Room Categories - Homepage Teasers
+Club Room: A perfect blend of modern amenities and unmatched luxury. For the executive who demands both productivity and comfort.
+Quad Room: Spacious twin-bed comfort designed for groups, families, and the ones who travel together. Two beds. Twice the joy.
+Suite Room: Contemporary styling at its most expansive. Urban luxury that gives you the city without sacrificing your peace.
+Super Deluxe Room: When superior is not enough. Our Super Deluxe rooms redefine the standard, raising every expectation by one exquisite degree.
+Statistics Bar
+SINCE 2015  �  60+ ROOMS  �  200+ BANQUET CAPACITY  �  18 KM FROM AIRPORT  �  24/7 SERVICE
+
+ABOUT US PAGE
+Our Story
+Page Title H1: The Blackstone Story - Built on Bold Ambitions
+BRAND NARRATIVE
+In 2015, a vision was set in stone - quite literally. The Blackstone Hotel was conceived as Rajkot's answer to a hospitality gap: a property that could serve the business traveller with the infrastructure of a corporate hotel while delivering the warmth and aesthetic of a boutique luxury escape. A decade later, that vision has been realised across every tile, every pendant light, and every plate that leaves our kitchen.
+Our name is not metaphor. The Blackstone identity is built into our architecture - the deep black marble that dominates our reception, the contrast of dark and gold that defines our brand, the weight and permanence of a hotel that intends to stand for generations. Located close to the Rajkot GIDC and the Ahmedabad bypass, we are positioned at the intersection of commerce and culture, accessibility and aspiration.
+Our Philosophy
+Philosophy Headline: Luxury Is Not What You Add. It Is What You Leave Out.
+At The Blackstone, we believe in the luxury of restraint. Our rooms do not shout. Our restaurant does not overwhelm. Our service does not intrude. Instead, we have created spaces where quality speaks in a quiet voice - where the excellence reveals itself over time, in the weight of a door handle, the angle of a reading light, the temperature of your morning coffee before you have asked.
+Heritage Wall - Maharaja Reference
+The portrait of Maharaja Krishnakumarsinhji of Bhavnagar that presides over our reception is not decoration. It is a declaration of our roots in Gujarat's royal legacy of hospitality - the tradition that says a guest is God (Atithi Devo Bhava). We honour that tradition every day, in every interaction, without exception.
+Location
+Address: 150 Ft. Ring Road, Nr. Sokhda Chowkdi, Survey No. 88/4, Plot No. 1, Rajkot - 360006
+Nearest Airport: Rajkot International Airport - 18 km / approx. 25 minutes
+Nearest Highway: Ahmedabad Bypass - adjacent
+Business District: Rajkot GIDC - 5 minutes
+
+ROOMS & SUITES PAGE
+Club Room
+Tagline: Precision Designed for the Purposeful Traveller
+The Club Room is The Blackstone's flagship standard - a room that understands the grammar of business travel without forgetting the poetry of rest. Ergonomic workspace, high-speed fibre Wi-Fi, 43-inch Smart 4K TV, and a bed engineered for deep, restorative sleep. Because your best work starts with your best rest.
+Club Room Amenities
+    - King-size bed / twin configuration available
+    - High-speed fibre Wi-Fi
+    - 43" Smart 4K LED TV
+    - Individual climate control (split AC)
+    - Rainfall shower + premium toiletries
+    - In-room safe, minibar, tea/coffee station
+    - Blackout curtains + ambient LED lighting
+    - 24-hour room service
+Quad Room
+Tagline: Two Beds. One Standard. Boundless Together.
+Built for the group that travels as one - family reunions, colleague trips, friend getaways - the Quad Room provides two double beds within a generously proportioned space. Because the best experiences are shared ones, and shared experiences deserve shared comfort.
+Suite Room
+Tagline: The Suite Life Is Not a Clich�. It Is a Coordinate.
+Enter a room that unfolds. The Suite at The Blackstone offers a separate living zone, expanded wardrobe space, premium bathroom with freestanding bath, and views that remind you exactly where you are. Urban luxury. Utterly contemporary. Undeniably yours.
+Super Deluxe Room
+Tagline: When You Have Earned the Extraordinary
+The Super Deluxe Room occupies the top tier of our standard accommodation - a space where every detail has been magnified. Larger footprint, premium furniture, enhanced minibar, and first-in-service priority. For guests who know the difference between good and exceptional, and choose accordingly.
+
+RESTAURANT PAGE
+Page H1: The Blackstone Restaurant - A Table Set for Royalty
+Tagline: Where every meal is a ceremony. Where every flavour is a memory.
+The Experience
+The Blackstone Restaurant is a 60+ cover dining room that draws equally on the culinary legacy of Gujarat and the global traditions of fine dining. Our executive chef sources local produce from Rajkot's morning markets, then transforms it through classical technique into dishes that are both familiar and revelatory. The result is a menu that feels like coming home - to a home you have always wished you had.
+Buffet Offering
+Our daily buffet - available for breakfast, lunch, and dinner - is a celebration of abundance without compromise. Rotating seasonal menus, freshly prepared � la minute dishes, live counter stations, and a dedicated dessert section that anchors every meal with something sweet and deliberate.
+Ambience
+Sixty covers beneath hand-blown pendant lights. Dark walnut furniture. Royal portrait walls. Marble floors that catch and hold the amber glow of evening service. The restaurant is a room that makes you want to linger - and we have designed it precisely so that you will.
+Restaurant Hours: Breakfast: 7:00 AM - 10:30 AM  �  Lunch: 12:30 PM - 3:00 PM  �  Dinner: 7:00 PM - 11:00 PM
+Reservation: +91 82382 82361 or at Reception
+
+BANQUET HALL PAGE
+Page H1: The Blackstone Grand Hall - Your Greatest Moments Deserve a Grand Stage
+The Space
+At 5,000 sq. ft. of air-conditioned, pillar-free floor space, The Blackstone Banquet Hall is Rajkot's most versatile event canvas. With a 40-foot ceiling, crystal chandelier lighting system, and a marble floor that reflects every celebration back at you in gold and white, the hall is architectural poetry in motion.
+Events We Celebrate
+    - Traditional Hindu weddings with full mandap infrastructure
+    - Corporate conferences and product launches
+    - Birthday milestones and anniversary celebrations
+    - Engagement ceremonies and post-wedding receptions
+    - Educational seminars and training workshops
+In-House D�cor Team
+Our dedicated event design team conceptualises and executes complete decorative transformations - from floral arch mandaps draped in white wisteria to corporate setups with AV systems and branded backdrops. You bring the occasion; we bring the vision.
+Capacity: 200+ guests (banquet seating) / 350 (cocktail/standing)
+AV System: Full surround sound, wireless microphones, 4K projection
+Catering: In-house restaurant team - custom menus available
+Enquiries: +91 82382 82361  �  Hoteltheblackstone@gmail.com
+
+GAME ZONE / RECREATION PAGE
+Page H1: The Refreshment Zone - Where Leisure Is Taken Seriously
+Our Philosophy of Play
+Luxury does not end at the bedroom door. The Blackstone Refreshment Zone is our commitment to the complete guest experience - a dedicated space where play, connection, and leisure are given the same premium attention as every other aspect of the property.
+Activities Available
+    - Indoor board games and strategy games lounge
+    - Table tennis and foosball
+    - Dedicated kids' zone with supervised play area
+    - Relaxation zone with lounge seating and curated music
+    - Refreshment counter with mocktails, juices, and snacks
+The zone is available exclusively to in-house guests and banquet event attendees. No outside bookings. Always premium.
+
+FACILITIES PAGE
+Page H1: Every Need, Anticipated Before You Ask
+High-Speed Wi-Fi
+Dedicated fibre internet infrastructure delivering 100 Mbps to every room. Whether you are video-conferencing with Hong Kong or streaming at midnight, The Blackstone's network performs without apology.
+Smart TV
+43-inch 4K Smart TVs in all rooms with access to major OTT platforms, international news channels, and hotel information system. Entertainment without compromise.
+Complimentary Breakfast
+A full buffet breakfast - included in all room categories - served daily in our restaurant. Because the best day begins with the best morning.
+Pick & Drop Facility
+Coordinated airport transfers and local drop services available 24 hours. Our concierge team arranges, confirms, and tracks every journey. Travel simply.
+Parking Facility
+Dedicated secure parking for guests - including space for premium vehicles. The Blackstone's parking has been designed to accommodate the guest who arrives with the car their success earned.
+Shower & Bathtub
+Rainfall shower systems and premium bathtub configurations in select rooms and all suites. Our bathroom architecture is designed as a daily ritual space - warm, considered, and completely private.
+
+GALLERY PAGE
+Page H1: A Hotel Best Told in Images
+Subtitle: 1,073 Frames. One Singular Vision.
+Gallery Categories
+    - Exterior & Architecture
+    - Reception & Lobby
+    - Restaurant & Dining
+    - Rooms & Suites
+    - Banquet Hall & Events
+    - Corridors & Living Spaces
+    - Facilities & Amenities
+Gallery images are sourced from our full 1,073-frame cinematic walkthrough. Each image is available in high resolution for press and media upon request.
+
+TESTIMONIALS PAGE
+Page H1: Spoken by Those Who Stayed
+Featured Reviews
+Piyush Patel - 5 Stars
+"Good service and amenities. Friendly behaviour by all the staff - especially the Manager, who is very cooperative, friendly, and takes care of guests like family members. Value for money." - Piyush Patel
+Darpan Vyas - 5 Stars
+"Awesome experience at The Blackstone Hotel. Food quality and quantity were excellent, and the ambience and staff service are outstanding. The buffet dinner menu had a wide range of items. The restaurant was neat, clean, and very well managed." - Darpan Vyas
+Prit Viroja - 5 Stars
+"One of the best hotels in Rajkot. Rooms are excellent. Staff cooperation is commendable. Food is hygienic and delicious. Special thanks to Manager Dixita for her help. The rooms are the best part - very hygienic and clean with every facility available." - Prit Viroja
+Review Schema Suggestion
+Implement Review structured data (schema.org/Review) for each testimonial for Google rich snippet eligibility. Include: author, reviewRating, reviewBody, datePublished, itemReviewed.
+
+FAQ PAGE
+Page H1: Everything You Need to Know Before You Arrive
+Frequently Asked Questions
+Q: What is the check-in and check-out time?: Check-in: 12:00 PM  �  Check-out: 11:00 AM. Early check-in and late check-out available on request, subject to availability.
+Q: Is breakfast included?: Yes. Complimentary buffet breakfast is included for all room categories.
+Q: Do you offer airport transfers?: Yes. Our pick & drop facility operates 24/7. Please inform us of your flight details at least 4 hours in advance.
+Q: Is parking available?: Yes. Complimentary secure parking is available for all in-house guests.
+Q: Can I host a wedding at The Blackstone?: Absolutely. Our Grand Banquet Hall accommodates 200+ seated guests. Contact our events team for a personalised proposal.
+Q: Is the hotel near Rajkot airport?: Yes. The hotel is approximately 18 km / 25 minutes from Rajkot International Airport.
+Q: Do rooms have Smart TVs?: Yes. All rooms are equipped with 43-inch Smart 4K LED TVs with OTT platform access.
+Q: Is high-speed Wi-Fi available?: Yes. Dedicated 100 Mbps fibre Wi-Fi is available throughout the property at no additional charge.
+Q: Do you have a restaurant?: Yes. The Blackstone Restaurant is open for breakfast, lunch, and dinner with a buffet format and � la carte options.
+Q: What is the best rate guarantee?: Booking directly through our website or by calling us guarantees the best available rate, plus complimentary upgrades when available.
+
+CONTACT PAGE
+Page H1: We Are Where You Need Us to Be
+Contact Details
+Address: 150 Ft. Ring Road, Nr. Sokhda Chowkdi, Survey No. 88/4, Plot No. 1, Rajkot - 360006, Gujarat, India
+Phone 1: +91 82382 82341
+Phone 2: +91 82382 82361
+Email: Hoteltheblackstone@gmail.com
+Website: https://theblackstone.in
+Enquiry Form Fields
+    - Full Name (required)
+    - Phone Number (required)
+    - Email Address (required)
+    - Check-in Date (date picker)
+    - Check-out Date (date picker)
+    - Number of Guests (dropdown: 1-8+)
+    - Room Type (dropdown: Club / Quad / Suite / Super Deluxe)
+    - Special Requirements (textarea)
+    - Submit: 'Send My Enquiry'
+Map
+Embed Google Maps showing pin at 150 Ft. Ring Road, Nr. Sokhda Chowkdi, Rajkot. Include directions links for driving from: Rajkot Airport, Rajkot Railway Station, Rajkot Bus Stand.
+
+FOOTER CONTENT
+Footer Columns
+Column 1 - Brand
+The Blackstone Hotel logo (white variant on dark background). Tagline: 'Where Heaven Meets Hospitality.' Since 2015. Social icons: Facebook, Instagram, Twitter, LinkedIn.
+Column 2 - Quick Links
+    - Home
+    - About Us
+    - Rooms & Suites
+    - Restaurant
+    - Banquet Hall
+    - Game Zone
+    - Facilities
+    - Gallery
+    - Testimonials
+    - FAQ
+    - Contact Us
+Column 3 - Contact
+Address: 150 Ft. Ring Road, Nr. Sokhda Chowkdi, Rajkot - 360006
+Phone: +91 82382 82341 | +91 82382 82361
+Email: Hoteltheblackstone@gmail.com
+Column 4 - Book Now
+CTA: Reserve Your Stay. Button: Book Now. Sub-copy: Best rates guaranteed when you book direct.
+Footer Bottom Bar
+� 2025 The Blackstone Hotel. All Rights Reserved.  �  Privacy Policy  �  Terms & Conditions  �  Managed by ADSENGINE MEDIA
+
+PART III
+SEO & METADATA PACKAGE
+- ? -
+Homepage SEO
+Meta Title: The Blackstone Hotel Rajkot | Luxury 3-Star Business Hotel | Rooms, Restaurant & Banquet
+Meta Description: The Blackstone Hotel, Rajkot - Premium 3-star business hotel on 150 Ft. Ring Road, 18 km from Rajkot Airport. Luxury rooms, grand restaurant, 200-seat banquet hall & game zone. Book direct for best rates.
+Focus Keyword: Luxury hotel Rajkot
+Secondary Keywords: 3-star hotel Rajkot, business hotel Rajkot GIDC, banquet hall Rajkot, restaurant Rajkot Ring Road, hotel near Rajkot airport
+Open Graph Tags
+<meta property="og:title" content="The Blackstone Hotel - Luxury Hospitality in Rajkot" />
+<meta property="og:description" content="Premier 3-star hotel near Rajkot GIDC. Rooms, restaurant, banquet hall, and recreation - all under one roof." />
+<meta property="og:image" content="https://theblackstone.in/og-blackstone-hero.jpg" />
+<meta property="og:url" content="https://theblackstone.in/" />
+<meta property="og:type" content="website" />
+Schema Markup - Hotel
+{   "@context": "https://schema.org",   "@type": "Hotel",   "name": "The Blackstone Hotel",   "url": "https://theblackstone.in",   "telephone": "+918238282361",   "email": "Hoteltheblackstone@gmail.com",   "address": {     "@type": "PostalAddress",     "streetAddress": "150 Ft. Ring Road, Nr. Sokhda Chowkdi, Survey No. 88/4",     "addressLocality": "Rajkot",     "addressRegion": "Gujarat",     "postalCode": "360006",     "addressCountry": "IN"   },   "starRating": { "@type": "Rating", "ratingValue": "3" },   "priceRange": "???",   "amenityFeature": [     { "@type": "LocationFeatureSpecification", "name": "Free WiFi", "value": true },     { "@type": "LocationFeatureSpecification", "name": "Free Parking", "value": true },     { "@type": "LocationFeatureSpecification", "name": "Restaurant", "value": true },     { "@type": "LocationFeatureSpecification", "name": "Banquet Hall", "value": true }   ] }
+Page-Level SEO Targets
+Page	Target Keyword	H1 Tag
+Homepage	luxury hotel Rajkot	Where Heaven Meets Hospitality
+About Us	best hotel Rajkot GIDC	The Blackstone Story
+Rooms	hotel rooms Rajkot	Rooms & Suites - Refined to Perfection
+Restaurant	restaurant Rajkot Ring Road	A Table Set for Royalty
+Banquet	banquet hall Rajkot	Your Greatest Moments Deserve a Grand Stage
+Contact	book hotel Rajkot	We Are Where You Need Us to Be
+
+PART IV
+ANIMATION & DEVELOPMENT TECHNICAL SPEC
+- ? -
+THE ONE-IN-A-MILLION NAVBAR
+DESIGN CONCEPT
+'The Celestial Progress Bar' - A Navbar That Tells the Hotel Story as You Scroll
+The navbar is not a navigation bar. It is a cinematic progress instrument. As the user scrolls through the 13 sections of the website - each mapped to the 1,073 frame walkthrough - the navbar transforms live to show exactly where in the hotel's story the user is standing.
+Visual Structure
+Position: Fixed top, full width, 72px height
+Background: Transparent on hero ? black (rgba 0,0,0,0.92) with gold blur backdrop-filter after scroll threshold
+Logo: Centre-aligned gold lotus SVG logo. Scales: 48px on load ? 38px after scroll.
+Navigation Links: Left-aligned: Home / About / Rooms / Restaurant / Banquet / Gallery / Contact
+CTA Button: Right-aligned: 'Book Now' - gold border, transparent fill ? gold fill on hover
+The Unique Feature: Frame Progress Arc
+Below the standard navbar elements, a 2px gold progress line spans the full width - but it is not a simple scroll indicator. It is segmented into 13 colour-coded zones (one per website section). The active zone pulses with a warm gold glow. The completed zones become solid dark gold. The upcoming zones are ghost-white at 20% opacity.
+On hover over any navbar link, a micro-preview tooltip appears above the link - showing a small thumbnail (from the walkthrough frames) of the section that link leads to. This is a hotel industry first.
+Frame Counter Element
+A discreet element in the upper-right corner of the navbar shows: 'Frame 001 / 1073' - updating in real time as the user scrolls, mirroring the video's own frame counter. This creates an extraordinary sense of cinematographic immersion.
+Font: Frame counter uses monospace (Courier New) in gold at 11px - deliberately cinematic
+Framer Motion - Navbar Implementation
+// Navbar scroll states const { scrollY } = useScroll(); const navBg = useTransform(scrollY, [0, 100], ['rgba(0,0,0,0)', 'rgba(0,0,0,0.92)']); const logoScale = useTransform(scrollY, [0, 100], [1.15, 1]);  // Frame progress (calculate from scrollY and section heights) const frameNumber = useTransform(scrollY, [0, totalScrollHeight], [1, 1073]); const frameDisplay = useMotionValue('001'); useMotionValueEvent(frameNumber, 'change', (v) => {   frameDisplay.set(String(Math.round(v)).padStart(3, '0')); });  // Section tooltip on hover const [hoveredSection, setHoveredSection] = useState(null); // AnimatePresence wraps tooltip with fade+scale transition
+GSAP - Navbar Implementation
+// Progress bar segments const segments = document.querySelectorAll('.nav-segment'); gsap.to(segments, {   scaleX: (i) => completionForSection(i),   ease: 'none',   scrollTrigger: { scrub: 0.3 } });  // Frame counter gsap.to('.frame-counter', {   textContent: 1073,   snap: { textContent: 1 },   ease: 'none',   scrollTrigger: { scrub: true, start: 'top top', end: 'bottom bottom' } });  // Hover tooltip document.querySelectorAll('.nav-link').forEach(link => {   link.addEventListener('mouseenter', () => showTooltip(link.dataset.section)); });
+Mobile Navbar Version
+On mobile (< 768px): hamburger icon right, logo centre, frame counter hidden. Menu slides down as full-screen overlay with dark background. Each menu item appears with stagger (0.08s). Active section highlighted in gold. Section thumbnail visible as 16:9 card below each link. Bottom of overlay: large 'Book Now' gold button.
+- ? -
+FRAMER MOTION - GLOBAL IMPLEMENTATION
+Global Variants Library
+// _variants.ts - import across all components  export const fadeUp = {   hidden: { opacity: 0, y: 40 },   visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } } };  export const textMaskReveal = {   hidden: { clipPath: 'inset(0 100% 0 0)' },   visible: { clipPath: 'inset(0 0% 0 0)', transition: { duration: 1.2, ease: [0.76, 0, 0.24, 1] } } };  export const luxuryScale = {   hidden: { scale: 1.1, opacity: 0 },   visible: { scale: 1, opacity: 1, transition: { duration: 2, ease: [0.22, 1, 0.36, 1] } } };  export const staggerContainer = {   hidden: {},   visible: { transition: { staggerChildren: 0.12, delayChildren: 0.2 } } };  export const blurReveal = {   hidden: { filter: 'blur(20px)', opacity: 0 },   visible: { filter: 'blur(0px)', opacity: 1, transition: { duration: 1.4, ease: 'easeOut' } } };
+Page Transition
+// Cinematic page transition - black curtain wipe export const pageVariants = {   initial: { clipPath: 'inset(0 0 100% 0)' },   animate: { clipPath: 'inset(0 0 0% 0)', transition: { duration: 0.9, ease: [0.76, 0, 0.24, 1] } },   exit:    { clipPath: 'inset(0 0 100% 0)', transition: { duration: 0.6, ease: [0.76, 0, 0.24, 1] } } };
+- ? -
+GSAP - GLOBAL IMPLEMENTATION
+Core ScrollTrigger Setup
+// plugins.js - register once at app entry import { gsap } from 'gsap'; import { ScrollTrigger } from 'gsap/ScrollTrigger'; import { SplitText } from 'gsap/SplitText'; import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin'; gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);  // Global smooth scroll import Lenis from '@studio-freight/lenis'; const lenis = new Lenis({ lerp: 0.08, smooth: true }); gsap.ticker.add((time) => lenis.raf(time * 1000));
+Headline Split Text Reveal
+// Used on all major section headings const split = new SplitText('.section-headline', { type: 'words,chars' }); gsap.from(split.chars, {   opacity: 0, y: 80, rotateX: -80,   stagger: 0.03, duration: 0.8, ease: 'back.out(1.7)',   scrollTrigger: { trigger: '.section-headline', start: 'top 80%' } });
+Horizontal Room Tour
+// Rooms page - horizontal scroll pin const roomTrack = document.querySelector('.rooms-track'); const roomCards = gsap.utils.toArray('.room-card');  gsap.to(roomCards, {   xPercent: -100 * (roomCards.length - 1),   ease: 'none',   scrollTrigger: {     trigger: '.rooms-section',     pin: true,     scrub: 1,     snap: 1 / (roomCards.length - 1),     end: () => '+=' + roomTrack.offsetWidth   } });
+- ? -
+FINAL DEVELOPER NOTES
+Tech Stack Recommendation
+Framework: Next.js 14+ (App Router) - SSR/SSG for SEO, React for animations
+Animation: Framer Motion 11 + GSAP 3.12 + Lenis smooth scroll
+Styling: Tailwind CSS + CSS custom properties for design tokens
+CMS: WordPress headless (existing site) or Sanity.io for content management
+Images: next/image with blur placeholder. WebP format. Lazy-load all gallery images.
+Video: 1,073 frame walkthrough: export as WebM + MP4. Use HTML5 video with scroll-scrub.
+Fonts: Georgia (serif headings) + Inter (body) + Courier New (frame counter). Self-hosted.
+Icons: Custom SVG icon set - do not use generic icon libraries for luxury aesthetic.
+Performance Targets
+Lighthouse Score: Performance > 90, SEO > 95, Accessibility > 88
+LCP: < 2.5s (hero image must be preloaded with <link rel=preload>)
+CLS: < 0.1 (reserve space for all images with aspect-ratio CSS)
+FID / INP: < 200ms (avoid heavy JavaScript on main thread during scroll)
+Colour Design Tokens
+:root {   --black:        #0D0D0D;   --gold:         #B8961A;   --gold-light:   #D4AF37;   --gold-dark:    #8B6914;   --divider:      #C9AA71;   --white:        #FFFFFF;   --cream:        #F9F6F0;   --text-dark:    #1A1A1A;   --text-body:    #4A4A4A;   --text-light:   #8A8A8A;   --marble:       #2C2C2C; }
+Typography Scale
+/* Hero H1 */    font-size: clamp(48px, 6vw, 96px);  font-family: Georgia;  letter-spacing: -0.02em; /* Section H1 */ font-size: clamp(36px, 4vw, 64px);   font-family: Georgia; /* H2 */         font-size: clamp(24px, 3vw, 42px);   font-family: Georgia;  font-style: italic; /* H3 */         font-size: clamp(18px, 2vw, 28px);   font-family: Arial;    font-weight: 700; /* Body */       font-size: clamp(15px, 1.2vw, 18px); font-family: Arial;    line-height: 1.8; /* Label */      font-size: 11px;  font-family: Arial;  letter-spacing: 0.2em;  text-transform: uppercase; /* Counter */    font-size: 11px;  font-family: 'Courier New';  color: var(--gold);
+Accessibility Notes
+    - All animations respect prefers-reduced-motion media query - disable parallax and auto-play for accessibility
+    - Focus states: gold outline on all interactive elements
+    - ARIA labels on all icon buttons
+    - Alt text on all images - use descriptive, keyword-rich descriptions
+    - Skip-to-main-content link as first focusable element
+    - Color contrast ratio: text on dark backgrounds meets WCAG AA (4.5:1 minimum)
+Deployment Checklist
+    - Add canonical tags to all pages
+    - Submit sitemap.xml to Google Search Console
+    - Configure hreflang for Gujarati language version (if planned)
+    - Implement Google Analytics 4 + Meta Pixel
+    - Set up conversion events: room inquiry form submit, phone click, book now click
+    - Enable caching headers for static assets (max-age: 31536000)
+    - Configure Content Security Policy headers
+    - SSL certificate active on all subdomains
+- END OF DOCUMENT -
+THE BLACKSTONE HOTEL  �  COMPLETE CINEMATIC WEBSITE CONTENT & ANIMATION GUIDE
+theblackstone.in  �  +91 82382 82361  �  Rajkot, Gujarat, India
