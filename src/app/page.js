@@ -100,9 +100,9 @@ export default function Home() {
     const isMobile = window.innerWidth <= 768;
     return {
       videoMax: isMobile ? 30 : 99,
-      animationRange: isMobile ? 42 : 140,
-      contactVisible: isMobile ? 40 : 138,
-      spacerHeight: isMobile ? "4200vh" : "14000vh"
+      animationRange: isMobile ? 60 : 140,
+      contactVisible: isMobile ? 58 : 138,
+      spacerHeight: isMobile ? "6000vh" : "14000vh"
     };
   };
   const isPreloadingRef = useRef(true);
@@ -804,17 +804,23 @@ export default function Home() {
     const tl = gsap.timeline({ paused: true });
     galleryTimelineRef.current = tl;
 
-    cards.forEach((card, index) => {
-      // Grid-based layout for premium scattering on the right side
-      const col = index % 4; // 4 columns
-      const row = Math.floor(index / 4); // 8 rows
+    const isMobile = window.innerWidth <= 768;
 
-      const baseX = 47 + col * 9.5;
-      const baseY = 12 + row * 9.0;
+    cards.forEach((card, index) => {
+      // Grid-based layout for premium scattering (full screen on mobile, right side on desktop)
+      const col = index % (isMobile ? 3 : 4); // 3 columns on mobile, 4 on desktop
+      const row = Math.floor(index / (isMobile ? 3 : 4)); 
+
+      const baseX = isMobile 
+        ? 10 + col * 26.0 
+        : 47 + col * 9.5;
+      const baseY = isMobile 
+        ? 8 + row * 8.0 
+        : 12 + row * 9.0;
 
       // Organic offsets to prevent artificial grid appearance
-      const offsetX = Math.sin(index * 1.7) * 4.0;
-      const offsetY = Math.cos(index * 2.3) * 3.5;
+      const offsetX = Math.sin(index * 1.7) * (isMobile ? 2.0 : 4.0);
+      const offsetY = Math.cos(index * 2.3) * (isMobile ? 1.5 : 3.5);
 
       const targetX = baseX + offsetX;
       const targetY = baseY + offsetY;
