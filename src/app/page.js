@@ -63,8 +63,11 @@ const roomData = {
 
 export default function Home() {
   const canvasRef = useRef(null);
-  const imagesRef = useRef([]);
-  const totalFrames = 1073;
+  const imageCache = useRef(new Map());
+  const abortControllers = useRef(new Map());
+  const TOTAL_FRAMES = 1073;
+  const WINDOW_SIZE = 30;
+  const screenMetrics = useRef({ width: 0, height: 0, scale: 1, offsetX: 0, offsetY: 0 });
   const scrollTitleRef = useRef(null);
   const separatorRef = useRef(null);
   const hasScrolledRef = useRef(false);
@@ -78,22 +81,47 @@ export default function Home() {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [activeLightboxImg, setActiveLightboxImg] = useState(null);
+  const [bgLoaded, setBgLoaded] = useState(false);
+  const [scrollSpacerHeight, setScrollSpacerHeight] = useState("14000vh");
   const isGalleryActiveRef = useRef(false);
   const galleryTimelineRef = useRef(null);
   const galleryRef = useRef(null);
   const [isPreloading, setIsPreloading] = useState(true);
+
+  const getScrollMultipliers = () => {
+    if (typeof window === "undefined") {
+      return {
+        videoMax: 99,
+        animationRange: 140,
+        contactVisible: 138,
+        spacerHeight: "14000vh"
+      };
+    }
+    const isMobile = window.innerWidth <= 768;
+    return {
+      videoMax: isMobile ? 30 : 99,
+      animationRange: isMobile ? 42 : 140,
+      contactVisible: isMobile ? 40 : 138,
+      spacerHeight: isMobile ? "4200vh" : "14000vh"
+    };
+  };
   const isPreloadingRef = useRef(true);
   const contactWrapperRef = useRef(null);
-  const contactYToRef = useRef(null);
-  const wrapperHeightRef = useRef(1500);
   const contactTitleRef = useRef(null);
   const contactInfoCardRef = useRef(null);
   const contactFormCardRef = useRef(null);
   const contactMapRef = useRef(null);
+  const spacerRef = useRef(null);
+  const contactWrapperHeightRef = useRef(1500);
+
+  // Cache display dimensions to avoid layout reads in render loop
+  const canvasDimensionsRef = useRef({ width: 1024, height: 768, dpr: 1 });
+  // Sliding window active range tracking
+  const windowRangeRef = useRef({ start: -1, end: -1 });
 
   // Secure Front-End Validation Helper (Cybersecurity Focused)
   const validateForm = (data) => {
-    const { fullname, phone, email, checkin, checkout, requirements } = data;
+    const { fullname, phone, email, checkin, checkout } = data;
 
     // 1. Cybersecurity Check: XSS Injection Detection
     const xssPattern = /<[^>]*>|javascript:|onerror|onload|onclick|eval/i;
@@ -187,11 +215,6 @@ export default function Home() {
       defaults: { ease: "power3.out" },
       onComplete: () => {
         console.log("Preloader timeline completed!");
-        if (typeof window !== 'undefined') {
-          window.isPreloading = false;
-        }
-        setIsPreloading(false);
-        isPreloadingRef.current = false;
       }
     });
 
@@ -221,34 +244,353 @@ export default function Home() {
     };
   }, []);
 
-  // Preload frames in staggered batches
-  useEffect(() => {
-    const loadedImages = [];
-    for (let i = 1; i <= totalFrames; i++) {
-      const img = new Image();
-      loadedImages.push(img);
-    }
-    imagesRef.current = loadedImages;
+  // Pre-load, resize, layout, sliding window memory cache, and render loops
+  // Pre-calculated Layout Math (CPU Optimization)
+  const calculateLayout = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    const batchSize = 30;
-    let currentIndex = 0;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.height = `${window.innerHeight}px`;
 
-    const loadNextBatch = () => {
-      if (currentIndex >= totalFrames) return;
-      const end = Math.min(currentIndex + batchSize, totalFrames);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset scale transform first
+    ctx.scale(dpr, dpr);
 
-      for (let i = currentIndex; i < end; i++) {
-        const paddedIndex = (i + 1).toString().padStart(6, "0");
-        loadedImages[i].src = `/frames/frame_${paddedIndex}.webp`;
-      }
+    const scale = Math.max(window.innerWidth / 1920, window.innerHeight / 1080);
+    const offsetX = (window.innerWidth - 1920 * scale) / 2;
+    const offsetY = (window.innerHeight - 1080 * scale) / 2;
 
-      currentIndex = end;
-      // Stagger subsequent batches to keep network free
-      setTimeout(loadNextBatch, 20);
+    screenMetrics.current = {
+      scale,
+      offsetX,
+      offsetY
     };
 
-    loadNextBatch();
-  }, []);
+
+
+    if (!isPreloadingRef.current) {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const easedScrollRatio = scrollState.current.current;
+      const easedScrollTop = easedScrollRatio * docHeight;
+      const multipliers = getScrollMultipliers();
+      const videoMaxScroll = window.innerHeight * multipliers.videoMax;
+      const videoProgress = Math.min(1.0, Math.max(0.0, easedScrollTop / videoMaxScroll));
+      const frameIndex = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(videoProgress * (TOTAL_FRAMES - 1))));
+      drawFrame(frameIndex);
+    }
+  };
+
+  // Preload individual frame off-main-thread and convert to ImageBitmap
+  const preloadImage = (index) => {
+    const paddedIndex = (index + 1).toString().padStart(6, "0");
+    const imagePath = `/frames/frame_${paddedIndex}.webp`;
+
+    if (abortControllers.current.has(index)) {
+      abortControllers.current.get(index).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.current.set(index, controller);
+
+    const promise = fetch(imagePath, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.blob();
+      })
+      .then((blob) => createImageBitmap(blob))
+      .then((bitmap) => {
+        if (imageCache.current.get(index) === promise) {
+          imageCache.current.set(index, bitmap);
+        } else {
+          bitmap.close();
+        }
+        return bitmap;
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          console.warn(`Failed to preload frame ${index}:`, err.message);
+        }
+        if (imageCache.current.get(index) === promise) {
+          imageCache.current.delete(index);
+        }
+        return null;
+      })
+      .finally(() => {
+        if (abortControllers.current.get(index) === controller) {
+          abortControllers.current.delete(index);
+        }
+      });
+    return promise;
+  };
+
+  // Sliding Window Memory Cache / Garbage Collector (RAM Optimization)
+  const manageMemoryWindow = (currentIndex) => {
+    const start = Math.max(0, currentIndex - WINDOW_SIZE);
+    const end = Math.min(TOTAL_FRAMES - 1, currentIndex + WINDOW_SIZE);
+
+    for (let i = start; i <= end; i++) {
+      if (!imageCache.current.has(i)) {
+        const promise = preloadImage(i);
+        imageCache.current.set(i, promise);
+      }
+    }
+
+    for (const [key, entry] of imageCache.current.entries()) {
+      if (key < start || key > end) {
+        if (abortControllers.current.has(key)) {
+          abortControllers.current.get(key).abort();
+          abortControllers.current.delete(key);
+        }
+        if (entry) {
+          if (!(entry instanceof Promise)) {
+            entry.close(); // Instantly flush the dedicated GPU RAM allocation
+          }
+        }
+        imageCache.current.delete(key);
+      }
+    }
+  };
+
+  // Dumb Render Loop (GPU Optimization)
+  const drawFrame = (frameIndex) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const scrollVal = frameIndex / (TOTAL_FRAMES - 1);
+    const displayIndex = frameIndex + 1;
+
+    manageMemoryWindow(frameIndex);
+
+    if (screenMetrics.current.scale === 1 && screenMetrics.current.offsetX === 0 && screenMetrics.current.offsetY === 0) {
+      calculateLayout();
+    }
+
+    const img = imageCache.current.get(frameIndex);
+    const { scale, offsetX, offsetY } = screenMetrics.current;
+
+    const drawImg = (bitmap) => {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      ctx.drawImage(bitmap, offsetX, offsetY, 1920 * scale, 1080 * scale);
+    };
+
+    if (img && !(img instanceof Promise)) {
+      drawImg(img);
+    } else {
+      let fallbackImg = null;
+      let minDistance = Infinity;
+      for (const [key, cachedImg] of imageCache.current.entries()) {
+        if (cachedImg && !(cachedImg instanceof Promise)) {
+          const dist = Math.abs(key - frameIndex);
+          if (dist < minDistance) {
+            minDistance = dist;
+            fallbackImg = cachedImg;
+          }
+        }
+      }
+      if (fallbackImg) {
+        drawImg(fallbackImg);
+      }
+    }
+
+    // Update DOM sections based on frame index
+    if (scrollTitleRef.current) {
+      if (displayIndex >= 1 && displayIndex <= 118) {
+        if (scrollVal > 0.001) {
+          hasScrolledRef.current = true;
+          let opacity = 1;
+          if (displayIndex > 95) {
+            opacity = Math.max(0, 1 - (displayIndex - 95) / 23);
+          }
+
+          const progress = (displayIndex - 1) / 117;
+          const translateY = -progress * 60;
+
+          if (scrollTitleRef.current.style.display !== "flex") {
+            scrollTitleRef.current.style.display = "flex";
+          }
+          scrollTitleRef.current.style.opacity = opacity;
+          scrollTitleRef.current.style.transform = `translate(-50%, calc(-50% + ${translateY}px))`;
+        } else if (hasScrolledRef.current) {
+          if (scrollTitleRef.current.style.display !== "flex") {
+            scrollTitleRef.current.style.display = "flex";
+          }
+          scrollTitleRef.current.style.opacity = 1;
+          scrollTitleRef.current.style.transform = "translate(-50%, -50%)";
+        }
+      } else {
+        if (scrollTitleRef.current.style.display !== "none") {
+          scrollTitleRef.current.style.opacity = 0;
+          scrollTitleRef.current.style.display = "none";
+        }
+      }
+    }
+
+    if (receptionRef.current) {
+      if (displayIndex >= 270 && displayIndex <= 390) {
+        let opacity = 1;
+        if (displayIndex < 290) {
+          opacity = (displayIndex - 270) / 20;
+        } else if (displayIndex > 365) {
+          opacity = Math.max(0, 1 - (displayIndex - 365) / 25);
+        }
+
+        const progress = (displayIndex - 270) / 120;
+        const translateY = -progress * 50;
+
+        if (receptionRef.current.style.display !== "flex") {
+          receptionRef.current.style.display = "flex";
+        }
+        receptionRef.current.style.opacity = opacity;
+        receptionRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
+      } else {
+        if (receptionRef.current.style.display !== "none") {
+          receptionRef.current.style.opacity = 0;
+          receptionRef.current.style.display = "none";
+        }
+      }
+    }
+
+    if (diningRef.current) {
+      if (displayIndex >= 450 && displayIndex <= 580) {
+        let opacity = 1;
+        if (displayIndex < 470) {
+          opacity = (displayIndex - 450) / 20;
+        } else if (displayIndex > 550) {
+          opacity = Math.max(0, 1 - (displayIndex - 550) / 30);
+        }
+
+        const progress = (displayIndex - 450) / 130;
+        const translateY = -progress * 50;
+
+        if (diningRef.current.style.display !== "flex") {
+          diningRef.current.style.display = "flex";
+        }
+        diningRef.current.style.opacity = opacity;
+        diningRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
+      } else {
+        if (diningRef.current.style.display !== "none") {
+          diningRef.current.style.opacity = 0;
+          diningRef.current.style.display = "none";
+        }
+      }
+    }
+
+    if (elevatorRef.current) {
+      if (displayIndex >= 620 && displayIndex <= 700) {
+        let opacity = 1;
+        if (displayIndex < 640) {
+          opacity = (displayIndex - 620) / 20;
+        } else if (displayIndex > 680) {
+          opacity = Math.max(0, 1 - (displayIndex - 680) / 20);
+        }
+
+        const progress = (displayIndex - 620) / 80;
+        const translateY = -progress * 55;
+
+        if (elevatorRef.current.style.display !== "flex") {
+          elevatorRef.current.style.display = "flex";
+        }
+        elevatorRef.current.style.opacity = opacity;
+        elevatorRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
+      } else {
+        if (elevatorRef.current.style.display !== "none") {
+          elevatorRef.current.style.opacity = 0;
+          elevatorRef.current.style.display = "none";
+        }
+      }
+    }
+
+    if (floorRef.current) {
+      if (displayIndex >= 700 && displayIndex <= 780) {
+        let opacity = 1;
+        if (displayIndex < 715) {
+          opacity = (displayIndex - 700) / 15;
+        } else if (displayIndex > 765) {
+          opacity = Math.max(0, 1 - (displayIndex - 765) / 15);
+        }
+
+        const progress = (displayIndex - 700) / 80;
+        const translateY = -progress * 40;
+
+        if (floorRef.current.style.display !== "flex") {
+          floorRef.current.style.display = "flex";
+        }
+        floorRef.current.style.opacity = opacity;
+        floorRef.current.style.transform = `translate(-50%, calc(-50% + ${translateY}px))`;
+      } else {
+        if (floorRef.current.style.display !== "none") {
+          floorRef.current.style.opacity = 0;
+          floorRef.current.style.display = "none";
+        }
+      }
+    }
+
+    if (bedroomRef.current) {
+      if (displayIndex >= 840 && displayIndex <= 980) {
+        let opacity = 1;
+        if (displayIndex < 860) {
+          opacity = (displayIndex - 840) / 20;
+        } else if (displayIndex > 950) {
+          opacity = Math.max(0, 1 - (displayIndex - 950) / 30);
+        }
+
+        const progress = (displayIndex - 840) / 140;
+        const translateY = -progress * 50;
+
+        if (bedroomRef.current.style.display !== "flex") {
+          bedroomRef.current.style.display = "flex";
+        }
+        bedroomRef.current.style.opacity = opacity;
+        bedroomRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
+      } else {
+        if (bedroomRef.current.style.display !== "none") {
+          bedroomRef.current.style.opacity = 0;
+          bedroomRef.current.style.display = "none";
+        }
+      }
+    }
+
+    if (banquetRef.current) {
+      if (displayIndex >= 1000) {
+        let opacity = 1;
+        if (displayIndex < 1015) {
+          opacity = (displayIndex - 1000) / 15;
+        }
+
+        const progress = Math.min(1, (displayIndex - 1000) / 73);
+        const translateY = -progress * 45;
+
+        if (banquetRef.current.style.display !== "flex") {
+          banquetRef.current.style.display = "flex";
+        }
+        banquetRef.current.style.opacity = opacity;
+        banquetRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
+      } else {
+        if (banquetRef.current.style.display !== "none") {
+          banquetRef.current.style.opacity = 0;
+          banquetRef.current.style.display = "none";
+        }
+      }
+    }
+
+    if (displayIndex === 1073) {
+      if (!isGalleryActiveRef.current) {
+        isGalleryActiveRef.current = true;
+        setShowGallery(true);
+      }
+    } else {
+      if (isGalleryActiveRef.current) {
+        isGalleryActiveRef.current = false;
+        setShowGallery(false);
+      }
+    }
+  };
 
   // Preload gallery images
   useEffect(() => {
@@ -258,430 +600,165 @@ export default function Home() {
     });
   }, []);
 
-  // Drawing loop
+  // Cleanup old service workers and caches from previous localhost projects (e.g. the industrial project)
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-
-    // resizeCanvas is declared below drawFrame to resolve TDZ ReferenceError
-
-    let lastDrawnIndex = -1;
-
-    // Optimized drawing loop without DPR multiplication to double GPU frame rate on Retina/High-DPI displays
-    const drawImg = (img) => {
-      const imgWidth = img.naturalWidth;
-      const imgHeight = img.naturalHeight;
-      const displayWidth = window.innerWidth;
-      const displayHeight = window.innerHeight;
-
-      const imgRatio = imgWidth / imgHeight;
-      const canvasRatio = displayWidth / displayHeight;
-
-      let dWidth, dHeight, dx, dy;
-
-      if (canvasRatio > imgRatio) {
-        dWidth = displayWidth;
-        dHeight = displayWidth / imgRatio;
-        dx = 0;
-        dy = (displayHeight - dHeight) / 2;
-      } else {
-        dWidth = displayHeight * imgRatio;
-        dHeight = displayHeight;
-        dx = (displayWidth - dWidth) / 2;
-        dy = 0;
+    if (typeof window !== "undefined") {
+      let needsReload = false;
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (let registration of registrations) {
+            registration.unregister();
+            needsReload = true;
+          }
+          if (needsReload) {
+            console.log("Cleared old service worker from localhost. Reloading page...");
+            window.location.reload();
+          }
+        });
       }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, dx, dy, dWidth, dHeight);
-    };
-
-    const drawFrame = (scrollVal) => {
-      if (imagesRef.current.length === 0) return;
-      let frameIndex = Math.round(scrollVal * (totalFrames - 1));
-      frameIndex = Math.min(totalFrames - 1, Math.max(0, frameIndex));
-
-      const displayIndex = frameIndex + 1;
-
-      // Update scroll title opacity and position (visible between frame 1 and 118)
-      if (scrollTitleRef.current) {
-        if (displayIndex >= 1 && displayIndex <= 118) {
-          if (scrollVal > 0.001) {
-            hasScrolledRef.current = true;
-            let opacity = 1;
-            if (displayIndex > 95) {
-              opacity = Math.max(0, 1 - (displayIndex - 95) / 23); // Fade out as we approach frame 118
-            }
-
-            const progress = (displayIndex - 1) / 117;
-            const translateY = -progress * 60; // Parallax rise upward
-
-            if (scrollTitleRef.current.style.display !== "flex") {
-              scrollTitleRef.current.style.display = "flex";
-            }
-            scrollTitleRef.current.style.opacity = opacity;
-            scrollTitleRef.current.style.transform = `translate(-50%, calc(-50% + ${translateY}px))`;
-          } else if (hasScrolledRef.current) {
-            // Reset to default visible state if we scrolled back to start
-            if (scrollTitleRef.current.style.display !== "flex") {
-              scrollTitleRef.current.style.display = "flex";
-            }
-            scrollTitleRef.current.style.opacity = 1;
-            scrollTitleRef.current.style.transform = "translate(-50%, -50%)";
-          }
-        } else {
-          if (scrollTitleRef.current.style.display !== "none") {
-            scrollTitleRef.current.style.opacity = 0;
-            scrollTitleRef.current.style.display = "none";
-          }
-        }
-      }
-
-      // Update reception section opacity and position (visible between frame 270 and 390)
-      if (receptionRef.current) {
-        if (displayIndex >= 270 && displayIndex <= 390) {
-          let opacity = 1;
-          if (displayIndex < 290) {
-            opacity = (displayIndex - 270) / 20; // fade in
-          } else if (displayIndex > 365) {
-            opacity = Math.max(0, 1 - (displayIndex - 365) / 25); // fade out
-          }
-
-          const progress = (displayIndex - 270) / 120;
-          const translateY = -progress * 50; // parallax vertical drift
-
-          if (receptionRef.current.style.display !== "flex") {
-            receptionRef.current.style.display = "flex";
-          }
-          receptionRef.current.style.opacity = opacity;
-          receptionRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
-        } else {
-          if (receptionRef.current.style.display !== "none") {
-            receptionRef.current.style.opacity = 0;
-            receptionRef.current.style.display = "none";
-          }
-        }
-      }
-
-      // Update dining hall section opacity and position (visible between frame 450 and 580)
-      if (diningRef.current) {
-        if (displayIndex >= 450 && displayIndex <= 580) {
-          let opacity = 1;
-          if (displayIndex < 470) {
-            opacity = (displayIndex - 450) / 20; // fade in
-          } else if (displayIndex > 550) {
-            opacity = Math.max(0, 1 - (displayIndex - 550) / 30); // fade out
-          }
-
-          const progress = (displayIndex - 450) / 130;
-          const translateY = -progress * 50; // parallax vertical drift
-
-          if (diningRef.current.style.display !== "flex") {
-            diningRef.current.style.display = "flex";
-          }
-          diningRef.current.style.opacity = opacity;
-          diningRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
-        } else {
-          if (diningRef.current.style.display !== "none") {
-            diningRef.current.style.opacity = 0;
-            diningRef.current.style.display = "none";
-          }
-        }
-      }
-
-      // Update elevator lobby section opacity and position (visible between frame 620 and 700)
-      if (elevatorRef.current) {
-        if (displayIndex >= 620 && displayIndex <= 700) {
-          let opacity = 1;
-          if (displayIndex < 640) {
-            opacity = (displayIndex - 620) / 20; // fade in
-          } else if (displayIndex > 680) {
-            opacity = Math.max(0, 1 - (displayIndex - 680) / 20); // fade out
-          }
-
-          const progress = (displayIndex - 620) / 80;
-          const translateY = -progress * 55; // parallax vertical drift
-
-          if (elevatorRef.current.style.display !== "flex") {
-            elevatorRef.current.style.display = "flex";
-          }
-          elevatorRef.current.style.opacity = opacity;
-          elevatorRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
-        } else {
-          if (elevatorRef.current.style.display !== "none") {
-            elevatorRef.current.style.opacity = 0;
-            elevatorRef.current.style.display = "none";
-          }
-        }
-      }
-
-      // Update second floor chapter title opacity and position (visible between frame 700 and 780)
-      if (floorRef.current) {
-        if (displayIndex >= 700 && displayIndex <= 780) {
-          let opacity = 1;
-          if (displayIndex < 715) {
-            opacity = (displayIndex - 700) / 15; // fade in
-          } else if (displayIndex > 765) {
-            opacity = Math.max(0, 1 - (displayIndex - 765) / 15); // fade out
-          }
-
-          const progress = (displayIndex - 700) / 80;
-          const translateY = -progress * 40; // parallax vertical drift
-
-          if (floorRef.current.style.display !== "flex") {
-            floorRef.current.style.display = "flex";
-          }
-          floorRef.current.style.opacity = opacity;
-          floorRef.current.style.transform = `translate(-50%, calc(-50% + ${translateY}px))`;
-        } else {
-          if (floorRef.current.style.display !== "none") {
-            floorRef.current.style.opacity = 0;
-            floorRef.current.style.display = "none";
-          }
-        }
-      }
-
-      // Update bedroom section opacity and position (visible between frame 840 and 980)
-      if (bedroomRef.current) {
-        if (displayIndex >= 840 && displayIndex <= 980) {
-          let opacity = 1;
-          if (displayIndex < 860) {
-            opacity = (displayIndex - 840) / 20; // fade in
-          } else if (displayIndex > 950) {
-            opacity = Math.max(0, 1 - (displayIndex - 950) / 30); // fade out
-          }
-
-          const progress = (displayIndex - 840) / 140;
-          const translateY = -progress * 50; // parallax vertical drift
-
-          if (bedroomRef.current.style.display !== "flex") {
-            bedroomRef.current.style.display = "flex";
-          }
-          bedroomRef.current.style.opacity = opacity;
-          bedroomRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
-        } else {
-          if (bedroomRef.current.style.display !== "none") {
-            bedroomRef.current.style.opacity = 0;
-            bedroomRef.current.style.display = "none";
-          }
-        }
-      }
-
-      // Update banquet section opacity and position (visible from frame 1000 onwards)
-      if (banquetRef.current) {
-        if (displayIndex >= 1000) {
-          let opacity = 1;
-          if (displayIndex < 1015) {
-            opacity = (displayIndex - 1000) / 15; // fade in
-          }
-
-          // Parallax progress capped at 1.0 (reached at frame 1073)
-          const progress = Math.min(1, (displayIndex - 1000) / 73);
-          const translateY = -progress * 45; // parallax vertical drift
-
-          if (banquetRef.current.style.display !== "flex") {
-            banquetRef.current.style.display = "flex";
-          }
-          banquetRef.current.style.opacity = opacity;
-          banquetRef.current.style.transform = `translateY(calc(-50% + ${translateY}px))`;
-        } else {
-          if (banquetRef.current.style.display !== "none") {
-            banquetRef.current.style.opacity = 0;
-            banquetRef.current.style.display = "none";
-          }
-        }
-      }
-
-      // Update gallery active state
-      if (displayIndex === 1073) {
-        if (!isGalleryActiveRef.current) {
-          isGalleryActiveRef.current = true;
-          setShowGallery(true);
-        }
-      } else {
-        if (isGalleryActiveRef.current) {
-          isGalleryActiveRef.current = false;
-          setShowGallery(false);
-        }
-      }
-
-      if (frameIndex === lastDrawnIndex) return;
-
-      const img = imagesRef.current[frameIndex];
-      if (img && img.complete && img.naturalWidth > 0) {
-        drawImg(img);
-        lastDrawnIndex = frameIndex;
-      } else {
-        // Fallback: find nearest loaded frame
-        let fallbackImg = null;
-        for (let offset = 1; offset < totalFrames; offset++) {
-          const prevIdx = frameIndex - offset;
-          const nextIdx = frameIndex + offset;
-
-          if (prevIdx >= 0) {
-            const prevImg = imagesRef.current[prevIdx];
-            if (prevImg && prevImg.complete && prevImg.naturalWidth > 0) {
-              fallbackImg = prevImg;
-              break;
-            }
-          }
-          if (nextIdx < totalFrames) {
-            const nextImg = imagesRef.current[nextIdx];
-            if (nextImg && nextImg.complete && nextImg.naturalWidth > 0) {
-              fallbackImg = nextImg;
-              break;
-            }
-          }
-        }
-
-        if (fallbackImg) {
-          drawImg(fallbackImg);
-          lastDrawnIndex = frameIndex;
-        }
-      }
-    };
-
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-
-      // Force redrawing the active frame on resize to avoid stretches or blank screens
-      const easedScrollRatio = scrollState.current.current;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const easedScrollTop = easedScrollRatio * docHeight;
-      const videoMaxScroll = window.innerHeight * 99;
-      const videoProgress = Math.min(1.0, Math.max(0.0, easedScrollTop / videoMaxScroll));
-
-      drawFrame(videoProgress);
-    };
-    window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
-
-
-    // Draw initial frame
-    const firstImg = imagesRef.current[0];
-    if (firstImg) {
-      if (firstImg.complete) {
-        drawFrame(0);
-      } else {
-        firstImg.onload = () => drawFrame(0);
+      if ("caches" in window) {
+        caches.keys().then((keys) => {
+          keys.forEach((key) => {
+            caches.delete(key);
+          });
+        });
       }
     }
+  }, []);
+
+  // Chunked Initial Loading (Network Optimization)
+  useEffect(() => {
+    let active = true;
+
+    const preloaderTimeout = setTimeout(() => {
+      if (active && isPreloadingRef.current) {
+        console.warn("Preloader safety timeout fallback triggered.");
+        setIsPreloading(false);
+        isPreloadingRef.current = false;
+        if (typeof window !== 'undefined') {
+          window.isPreloading = false;
+        }
+      }
+    }, 5000);
+
+    const preloadRemainingChunks = (currentChunkStart = 50) => {
+      if (!active || currentChunkStart >= TOTAL_FRAMES) return;
+      const CHUNK_SIZE = 50;
+
+      const requestIdle = typeof window !== 'undefined' && window.requestIdleCallback
+        ? window.requestIdleCallback
+        : (cb) => setTimeout(cb, 1);
+
+      requestIdle(() => {
+        if (!active) return;
+        const end = Math.min(TOTAL_FRAMES - 1, currentChunkStart + CHUNK_SIZE - 1);
+        for (let i = currentChunkStart; i <= end; i++) {
+          const paddedIndex = (i + 1).toString().padStart(6, "0");
+          const imagePath = `/frames/frame_${paddedIndex}.webp`;
+          fetch(imagePath, { priority: 'low' }).catch(() => { });
+        }
+        preloadRemainingChunks(currentChunkStart + CHUNK_SIZE);
+      });
+    };
+
+    const loadFirstFifty = async () => {
+      const promises = [];
+      for (let i = 0; i < 50; i++) {
+        const promise = preloadImage(i);
+        imageCache.current.set(i, promise);
+        promises.push(promise);
+      }
+
+      await Promise.all(promises);
+
+      if (active && isPreloadingRef.current) {
+        console.log("Preloaded initial 50 frames with ImageBitmap. Unlocking UI...");
+        clearTimeout(preloaderTimeout);
+        setIsPreloading(false);
+        isPreloadingRef.current = false;
+        if (typeof window !== 'undefined') {
+          window.isPreloading = false;
+        }
+        // Start background chunking engine
+        preloadRemainingChunks(50);
+      }
+    };
+
+    loadFirstFifty();
+
+    return () => {
+      active = false;
+      clearTimeout(preloaderTimeout);
+    };
+  }, []);
+
+  // Drawing loop and lifecycle setup
+  useEffect(() => {
+    const handleResize = () => {
+      calculateLayout();
+      const multipliers = getScrollMultipliers();
+      setScrollSpacerHeight(multipliers.spacerHeight);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
 
     let animationFrameId;
     const tick = () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      let scrollTop = window.scrollY;
+
       if (isPreloadingRef.current) {
         scrollState.current.current = 0;
         scrollState.current.target = 0;
-        window.scrollTo(0, 0);
-        drawFrame(0);
-        animationFrameId = requestAnimationFrame(tick);
-        return;
+        scrollTop = 0;
       }
+
+      let target = docHeight > 0 ? scrollTop / docHeight : 0;
+      if (scrollTop + window.innerHeight >= document.documentElement.scrollHeight - 5) {
+        target = 1.0;
+      } else if (scrollTop <= 5) {
+        target = 0.0;
+      }
+      scrollState.current.target = target;
 
       const diff = Math.abs(scrollState.current.target - scrollState.current.current);
       if (diff > 0.0001) {
         scrollState.current.current += (scrollState.current.target - scrollState.current.current) * 0.05;
       } else if (scrollState.current.current !== scrollState.current.target) {
-        // Snap to exact target when settling to avoid floating computations
         scrollState.current.current = scrollState.current.target;
       }
 
       const easedScrollRatio = scrollState.current.current;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const easedScrollTop = easedScrollRatio * docHeight;
-      const videoMaxScroll = window.innerHeight * 99;
-      const animationRange = window.innerHeight * 179;
+      const multipliers = getScrollMultipliers();
+      const videoMaxScroll = window.innerHeight * multipliers.videoMax;
+      const animationRange = window.innerHeight * multipliers.animationRange;
 
-      // Draw frames based on eased video ratio
       const videoProgress = Math.min(1.0, Math.max(0.0, easedScrollTop / videoMaxScroll));
-      drawFrame(videoProgress);
+      const frameIndex = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(videoProgress * (TOTAL_FRAMES - 1))));
+      drawFrame(frameIndex);
 
-      // Control gallery timeline progress based on eased gallery ratio
       const galleryProgress = Math.min(1.0, Math.max(0.0, (easedScrollTop - videoMaxScroll) / (animationRange - videoMaxScroll)));
       if (galleryTimelineRef.current) {
         galleryTimelineRef.current.progress(galleryProgress);
       }
 
-      // Fade out canvas and gallery collage container when scrolling past animationRange
-      let fixedOpacity = 1;
-      if (easedScrollTop > animationRange) {
-        const fadeDistance = window.innerHeight * 0.5;
-        fixedOpacity = Math.max(0, 1 - (easedScrollTop - animationRange) / fadeDistance);
-      }
+      // Keep canvas and gallery fully visible in the background as the contact page scrolls over them
+      const fixedOpacity = 1;
       if (canvasRef.current) {
-        canvasRef.current.style.opacity = 1;
+        canvasRef.current.style.opacity = fixedOpacity;
       }
       if (galleryRef.current) {
-        galleryRef.current.style.opacity = 1;
+        galleryRef.current.style.opacity = fixedOpacity;
         galleryRef.current.style.pointerEvents = "auto";
       }
 
-      // Slide up Contact section from the bottom of the viewport smoothly using GSAP quickTo
       if (contactWrapperRef.current) {
-        if (easedScrollTop > animationRange) {
-          const delta = easedScrollTop - animationRange;
-          const speedFactor = 1.0; // 1:1 scroll speed for maximum smoothness
-          const maxScroll = Math.max(0, wrapperHeightRef.current - window.innerHeight);
-          const targetY = Math.max(-maxScroll, window.innerHeight - delta * speedFactor);
-          
-          if (contactYToRef.current) {
-            contactYToRef.current(targetY);
-          } else {
-            contactWrapperRef.current.style.transform = `translateY(${targetY}px)`;
-          }
-          contactWrapperRef.current.style.pointerEvents = "auto";
-
-          // Animate elements inside the contact wrapper based on scroll delta
-          // Title animates early
-          const titleProgress = Math.min(1, Math.max(0, delta / 300));
-          if (contactTitleRef.current) {
-            contactTitleRef.current.style.opacity = titleProgress;
-            contactTitleRef.current.style.transform = `translateY(${(1 - titleProgress) * 30}px)`;
-          }
-
-          // Cards animate as scroll continues
-          const cardsProgress = Math.min(1, Math.max(0, (delta - 100) / 450));
-          if (contactInfoCardRef.current) {
-            contactInfoCardRef.current.style.opacity = cardsProgress;
-            contactInfoCardRef.current.style.transform = `translateY(${(1 - cardsProgress) * 50}px)`;
-          }
-          if (contactFormCardRef.current) {
-            contactFormCardRef.current.style.opacity = cardsProgress;
-            contactFormCardRef.current.style.transform = `translateY(${(1 - cardsProgress) * 50}px)`;
-          }
-
-          // Map animates at the end
-          const mapProgress = Math.min(1, Math.max(0, (delta - 300) / 500));
-          if (contactMapRef.current) {
-            contactMapRef.current.style.opacity = mapProgress;
-            contactMapRef.current.style.transform = `translateY(${(1 - mapProgress) * 60}px)`;
-          }
+        const contactVisible = easedScrollTop > (window.innerHeight * multipliers.contactVisible);
+        if (contactVisible) {
+          contactWrapperRef.current.classList.add("visible");
         } else {
-          if (contactYToRef.current) {
-            contactYToRef.current(window.innerHeight);
-          } else {
-            contactWrapperRef.current.style.transform = `translateY(${window.innerHeight}px)`;
-          }
-          contactWrapperRef.current.style.pointerEvents = "none";
-
-          // Reset animations when scrolled out of view
-          if (contactTitleRef.current) {
-            contactTitleRef.current.style.opacity = "0";
-            contactTitleRef.current.style.transform = "translateY(30px)";
-          }
-          if (contactInfoCardRef.current) {
-            contactInfoCardRef.current.style.opacity = "0";
-            contactInfoCardRef.current.style.transform = "translateY(50px)";
-          }
-          if (contactFormCardRef.current) {
-            contactFormCardRef.current.style.opacity = "0";
-            contactFormCardRef.current.style.transform = "translateY(50px)";
-          }
-          if (contactMapRef.current) {
-            contactMapRef.current.style.opacity = "0";
-            contactMapRef.current.style.transform = "translateY(60px)";
-          }
+          contactWrapperRef.current.classList.remove("visible");
         }
       }
 
@@ -690,7 +767,7 @@ export default function Home() {
     tick();
 
     return () => {
-      window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
@@ -728,7 +805,7 @@ export default function Home() {
     galleryTimelineRef.current = tl;
 
     cards.forEach((card, index) => {
-      // Grid-based layout for premium scattering on the right side (from 47vw to 76vw, 12vh to 75vh)
+      // Grid-based layout for premium scattering on the right side
       const col = index % 4; // 4 columns
       const row = Math.floor(index / 4); // 8 rows
 
@@ -758,7 +835,7 @@ export default function Home() {
         zIndex: index + 10,
       });
 
-      // Add to animation timeline with stagger (stretched out for a 40% slower, smoother reveal)
+      // Add to animation timeline with stagger
       const startTime = index * 0.38;
       tl.to(card, {
         x: `${targetX}vw`,
@@ -767,7 +844,7 @@ export default function Home() {
         opacity: 1,
         scale: 1,
         duration: 1.6,
-        ease: "back.out(1.2)", // Elegant subtle bounce on landing
+        ease: "back.out(1.2)",
       }, startTime);
     });
 
@@ -776,34 +853,6 @@ export default function Home() {
         galleryTimelineRef.current.kill();
       }
     };
-  }, []);
-
-  // Measure contact wrapper height dynamically to calculate scroll spacer height
-  useEffect(() => {
-    if (!contactWrapperRef.current) return;
-    const spacer = document.querySelector(".contact-footer-spacer");
-    const observer = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        const height = entry.target.clientHeight || entry.contentRect.height;
-        wrapperHeightRef.current = height;
-        if (spacer) {
-          spacer.style.height = `${height}px`;
-        }
-      }
-    });
-    observer.observe(contactWrapperRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  // Initialize GSAP quickTo for smooth contact wrapper sliding
-  useEffect(() => {
-    if (contactWrapperRef.current) {
-      contactYToRef.current = gsap.quickTo(contactWrapperRef.current, "y", {
-        duration: 0.15, // Extremely responsive to avoid laggy feeling
-        ease: "power1.out",
-        runBackwards: false
-      });
-    }
   }, []);
 
   // Listen to Escape key to close contact modal and lightbox
@@ -855,6 +904,29 @@ export default function Home() {
 
     const wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
 
+    const handleGlobalError = (e) => {
+      if (e && e.message && (
+        e.message.includes("Blocked a frame with origin") ||
+        e.message.includes("Failed to read a named property")
+      )) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const handleUnhandledRejection = (e) => {
+      if (e && e.reason && e.reason.message && (
+        e.reason.message.includes("Blocked a frame with origin") ||
+        e.reason.message.includes("Failed to read a named property")
+      )) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener('error', handleGlobalError, true);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection, true);
+
     window.addEventListener('DOMMouseScroll', preventDefault, { passive: false });
     window.addEventListener(wheelEvent, preventDefault, { passive: false });
     window.addEventListener('touchmove', preventDefault, { passive: false });
@@ -864,6 +936,8 @@ export default function Home() {
     window.scrollTo(0, 0);
 
     return () => {
+      window.removeEventListener('error', handleGlobalError, true);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection, true);
       window.removeEventListener('DOMMouseScroll', preventDefault);
       window.removeEventListener(wheelEvent, preventDefault);
       window.removeEventListener('touchmove', preventDefault);
@@ -1013,9 +1087,17 @@ export default function Home() {
 
         {/* Main Website Content */}
         <div className="main-content-container">
+
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/frames/frame_000001.webp" alt="First Frame placeholder" className="bg-frame" />
-          <canvas ref={canvasRef}></canvas>          {/* Gallery Collage Section */}
+          <img
+            src="/frames/frame_000001.webp"
+            alt="First Frame placeholder"
+            className="bg-frame"
+            onLoad={() => setBgLoaded(true)}
+            style={{ opacity: bgLoaded ? 1 : 0, transition: "opacity 0.2s ease" }}
+          />
+          <canvas ref={canvasRef}></canvas>
+          {/* Gallery Collage Section */}
           <div className="gallery-collage-container" ref={galleryRef}>
             {galleryImages.map((src, index) => (
               <div
@@ -1033,34 +1115,38 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="scroll-spacer"></div>
+          {/* Dynamic Scroll Spacer aligned to adjusted animation range */}
+          <div className="scroll-spacer" style={{ height: scrollSpacerHeight }}></div>
 
-          {/* Wrapper for Contact & Footer to control scroll speed */}
-          <div className="contact-footer-wrapper" ref={contactWrapperRef}>
+          {/* Wrapper for Contact & Footer in stable structural document flow */}
+          <div
+            className="contact-footer-wrapper"
+            ref={contactWrapperRef}
+          >
             {/* New Premium Contact Experience Section */}
             <section className="premium-contact-section" id="contact-experience">
-              
+
               {/* Top Title Banner */}
               <div className="contact-banner-gradient">
-                <h1 ref={contactTitleRef} className="contact-banner-title" style={{ opacity: 0, transform: "translateY(30px)" }}>Contact Us</h1>
+                <h1 className="contact-banner-title">Contact Us</h1>
               </div>
 
               <div className="contact-experience-container">
                 <div className="contact-experience-grid">
-                  
+
                   {/* Left Column: Contact Information */}
-                  <div ref={contactInfoCardRef} className="contact-info-card" style={{ opacity: 0, transform: "translateY(50px)" }}>
+                  <div className="contact-info-card">
                     <h2 className="info-card-title">Contact Information</h2>
                     <p className="info-card-intro">
                       Have questions or need help with your booking? Our team is always ready to assist you with professional solutions and reliable support. Feel free to contact us anytime and we will respond as quickly as possible.
                     </p>
-                    
+
                     <div className="info-card-list">
                       {/* Phone Item */}
                       <div className="info-list-item">
                         <div className="info-item-icon-circle">
                           <svg viewBox="0 0 24 24" className="info-item-svg">
-                            <path d="M6.62 10.79a15.15 15.15 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.11-.27c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.26 1.1l-2.2 2.22z" fill="currentColor"/>
+                            <path d="M6.62 10.79a15.15 15.15 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.11-.27c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.26 1.1l-2.2 2.22z" fill="currentColor" />
                           </svg>
                         </div>
                         <div className="info-item-content">
@@ -1076,7 +1162,7 @@ export default function Home() {
                       <div className="info-list-item">
                         <div className="info-item-icon-circle">
                           <svg viewBox="0 0 24 24" className="info-item-svg">
-                            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor"/>
+                            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor" />
                           </svg>
                         </div>
                         <div className="info-item-content">
@@ -1091,7 +1177,7 @@ export default function Home() {
                       <div className="info-list-item">
                         <div className="info-item-icon-circle">
                           <svg viewBox="0 0 24 24" className="info-item-svg">
-                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor" />
                           </svg>
                         </div>
                         <div className="info-item-content">
@@ -1106,7 +1192,7 @@ export default function Home() {
                       <div className="info-list-item">
                         <div className="info-item-icon-circle">
                           <svg viewBox="0 0 24 24" className="info-item-svg">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor" />
                           </svg>
                         </div>
                         <div className="info-item-content">
@@ -1120,7 +1206,7 @@ export default function Home() {
                   </div>
 
                   {/* Right Column: Get In Touch Form */}
-                  <div ref={contactFormCardRef} className="contact-form-card" style={{ opacity: 0, transform: "translateY(50px)" }}>
+                  <div className="contact-form-card">
                     <div className="form-tag-row">
                       <span className="form-tag-star">*</span>
                       <span className="form-tag-text">Get In Touch</span>
@@ -1159,7 +1245,7 @@ export default function Home() {
                           <input type="tel" required maxLength={15} className="ui-input-field" />
                         </div>
                       </div>
-                      
+
                       <div className="form-row-2-ui">
                         <div className="form-field-ui">
                           <label className="ui-field-label">Email Address *</label>
@@ -1212,7 +1298,7 @@ export default function Home() {
                         <span>Send My Enquiry</span>
                         <div className="submit-btn-arrow-circle">
                           <svg viewBox="0 0 24 24" className="submit-btn-arrow-svg">
-                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </div>
                       </button>
@@ -1222,13 +1308,13 @@ export default function Home() {
                 </div>
 
                 {/* Our Location Map Section */}
-                <div ref={contactMapRef} className="contact-map-section" style={{ opacity: 0, transform: "translateY(60px)" }}>
+                <div className="contact-map-section">
                   <div className="map-tag-row">
                     <span className="map-tag-star">*</span>
                     <span className="map-tag-text">Our Location</span>
                   </div>
                   <h2 className="map-section-title">Visit Our Office For In-person Meetings And Consultations</h2>
-                  
+
                   <div className="map-frame-wrapper">
                     <iframe
                       title="The Blackstone Hotel Google Map Location"
@@ -1250,7 +1336,7 @@ export default function Home() {
             {/* Premium Footer */}
             <footer className="premium-footer">
               <div className="footer-container">
-                
+
                 {/* GET IN TOUCH footer header */}
                 <div className="footer-title-header">
                   <h2 className="footer-heading-text">GET IN TOUCH</h2>
@@ -1268,16 +1354,16 @@ export default function Home() {
                     </p>
                     <div className="footer-socials-ui">
                       <a href="#" className="social-btn-ui" aria-label="Facebook">
-                        <svg viewBox="0 0 24 24" className="social-svg-ui"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" className="social-svg-ui"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" fill="currentColor" /></svg>
                       </a>
                       <a href="#" className="social-btn-ui" aria-label="Instagram">
-                        <svg viewBox="0 0 24 24" className="social-svg-ui"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" className="social-svg-ui"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" fill="currentColor" /></svg>
                       </a>
                       <a href="#" className="social-btn-ui" aria-label="LinkedIn">
-                        <svg viewBox="0 0 24 24" className="social-svg-ui"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" className="social-svg-ui"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" fill="currentColor" /></svg>
                       </a>
                       <a href="#" className="social-btn-ui" aria-label="YouTube">
-                        <svg viewBox="0 0 24 24" className="social-svg-ui"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.5 12 3.5 12 3.5s-7.518 0-9.388.555a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.5 12 20.5 12 20.5s7.518 0 9.388-.555a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" className="social-svg-ui"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.5 12 3.5 12 3.5s-7.518 0-9.388.555a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.5 12 20.5 12 20.5s7.518 0 9.388-.555a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="currentColor" /></svg>
                       </a>
                     </div>
                   </div>
@@ -1287,19 +1373,19 @@ export default function Home() {
                     <h3 className="footer-col-title">Contact Us</h3>
                     <div className="footer-contact-info-list">
                       <p className="footer-contact-item">
-                        <svg viewBox="0 0 24 24" className="footer-contact-icon-svg"><path d="M6.62 10.79a15.15 15.15 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.11-.27c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.26 1.1l-2.2 2.22z" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" className="footer-contact-icon-svg"><path d="M6.62 10.79a15.15 15.15 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.11-.27c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.26 1.1l-2.2 2.22z" fill="currentColor" /></svg>
                         <span>+91 82382 82341 | +91 82382 82361</span>
                       </p>
                       <p className="footer-contact-item">
-                        <svg viewBox="0 0 24 24" className="footer-contact-icon-svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" className="footer-contact-icon-svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor" /></svg>
                         <span>150 Ft. Ring Road, Nr. Sokhda Chowkdi, Rajkot</span>
                       </p>
                       <p className="footer-contact-item">
-                        <svg viewBox="0 0 24 24" className="footer-contact-icon-svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" className="footer-contact-icon-svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor" /></svg>
                         <span>Hoteltheblackstone@gmail.com</span>
                       </p>
                       <p className="footer-contact-item">
-                        <svg viewBox="0 0 24 24" className="footer-contact-icon-svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" className="footer-contact-icon-svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor" /></svg>
                         <span>24/7 Front Desk / Guest Relations</span>
                       </p>
                     </div>
@@ -1317,14 +1403,6 @@ export default function Home() {
               </div>
             </footer>
           </div>
-
-          {/* Spacer to allow scrolling through the translated wrapper */}
-          <div 
-            className="contact-footer-spacer"
-            style={{ 
-              height: "1500px"
-            }} 
-          />
         </div>
       </div>
 
